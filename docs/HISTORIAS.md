@@ -30,6 +30,7 @@ Legenda: `Feito` · `Pendente` · `Bloqueada` (depende de decisão do back, ver 
 | H11 | Cards do Home integrados | Pendente |
 | H12 | Remoção de mocks e limpeza final | Pendente |
 | H13 | Guard de rota por grupo de acesso | Bloqueada (Q6, Q7) |
+| H14 | Inventário e revisão dos formulários | Pendente |
 
 Ordem sugerida: H1 → H2 → H3 → H4 → H7 → H8 → H10 → H5 → H6 → H9 → H11 → H13 → H12. (H13 pode subir na fila assim que Q6 e Q7 forem respondidas; ela só depende de H0.3.)
 
@@ -93,6 +94,8 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 **Fazer:**
 - Carregar com `listar({ tipo, busca })` (filtro no back, com *debounce* de ~300 ms na busca). As estatísticas (total, PF, PJ, ativos) continuam derivadas da lista completa: buscar sem filtro ou usar contadores do back (Q5).
 - "Novo Cliente" e "Editar": criar modal de formulário (não existe hoje; seguir o padrão de `ModalEditarProduto` em `Estoque.tsx`) com `ClienteInput`. "Excluir": confirmação + `excluir(id)`.
+- **Campos do modal (ver H14):** `tipo` (PF/PJ) decide o rótulo ("CPF"/"CNPJ", "Nome"/"Razão Social") e a máscara; documento validado (dígitos verificadores, ver H14); e-mail, telefone e `ativo`. Erro por campo, não só mensagem geral.
+- **Busca por documento:** o campo "Buscar por nome, documento ou email" já aceita CPF e CNPJ; garantir que a busca ignore a máscara (comparar só dígitos).
 - Estados de carregando, erro e lista vazia.
 **Aceite:** CRUD funciona contra o back; lista atualiza após cada operação; erro do back aparece na tela.
 
@@ -110,6 +113,7 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 **Fazer:**
 - **Buscar produto** (campo "Buscar produto…" e botão "Adicionar Produto"): `produtosService.listar({ busca })`, lista de resultados, adiciona ao carrinho. `ItemCarrinho` precisa passar a guardar `produtoId` (hoje só tem `codigo`); manter `editandoPreco`/`precoTemp` só na UI.
 - **Cliente:** ligar os campos CPF/CNPJ e nome a estado (hoje soltos); busca por documento com `clientesService.listar({ documento })`; guardar `clienteId`. Não identificado (NFC-e) → `clienteId: null`.
+- **Regra do documento (H14):** NF-e exige CNPJ ou CPF (rótulo "CNPJ/CPF *"); NFC-e aceita só CPF opcional. Hoje o placeholder muda por tipo, mas a máscara e a validação não: aplicar máscara pelo número de dígitos (11 → CPF, 14 → CNPJ) e validar os dígitos verificadores antes de buscar. Cliente não encontrado: oferecer cadastro rápido (mesmo modal da H3) ou seguir só com nome digitado (Q8).
 - **Finalizar Venda:** `vendasService.criar({ …, status: "finalizada" })`. **Salvar Orçamento:** `status: "orcamento"`.
 - **Payload `VendaInput`:** `tipoDocumento`, `modalidade`, `clienteId`, `metodoPagamento`, `bandeira` (**só** se crédito/débito, senão `null`), `destinoDinheiro` (**só** se dinheiro, senão `null`), `desconto`, `itens: [{ produtoId, quantidade, valorUnitario }]`.
 - **Desconto:** limitar a `subtotal` (hoje pode gerar total negativo) — confirmar regra (Q2).
@@ -125,6 +129,7 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 - **XML/PDF:** `baixarXml(id)`/`baixarPdf(id)` + `baixarArquivo`.
 - **Enviar Lote ao Contador:** `enviarLoteContador()` com confirmação e feedback. **Exportar Relatório:** `relatorio(filtro)` + `baixarArquivo`.
 - **Emitir NF-e:** navegar para `/pdv` já com NF-e selecionada (Q3).
+- **Filtrar (formulário que falta, H14):** o botão "Filtrar" hoje não abre nada. Campos: status (`StatusNota`, com "todos"), data inicial e data final (`de` ≤ `ate`); botão "Limpar". Reutilizar o mesmo formulário no relatório (`relatorio(filtro)`).
 - Estatísticas ("Emitidas Hoje", "Total do Dia", "Autorizadas", "Canceladas"): derivar da lista do dia ou contadores do back (Q5).
 **Aceite:** lista real; downloads funcionam; indicadores coerentes com a lista.
 
@@ -164,6 +169,8 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 - **Importar XML** (input sem handler): `importarXmlEntrada(arquivo)` devolve `EntradaInput` para preencher fornecedor, nota e itens.
 - `handleSalvar` → `registrarEntrada(payload)`; remover `setTimeout`. O back soma as quantidades ao estoque (o front só informa).
 - Campo `ie` do fornecedor: adicionar o input (existe no estado, sem campo na tela).
+- **Validação (H14):** CNPJ do fornecedor com máscara e dígitos verificadores; `chaveAcesso` com 44 dígitos numéricos; `dataEntrada` ≥ `dataEmissao`; UF entre as 27 válidas. Os obrigatórios já têm `*` (CNPJ, razão social, número, emissão); passar a bloquear o salvar e mostrar o erro no campo.
+- "Adicionar item" já tem botão: conferir o subformulário de item (código, descrição, NCM, quantidade, valor) quando a história começar.
 - Botão "Cancelar": limpar o formulário.
 **Aceite:** nota registrada e estoque atualizado no back; importação de XML preenche o formulário.
 
@@ -171,7 +178,7 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 **Arquivos:** `components/VendasCard.tsx`, `EstoqueCard.tsx`, `FiscalCard.tsx`. **Depende de:** H1.
 - **EstoqueCard:** `produtosService.listar({ status })` para baixo/crítico (Q5: o back aceita um status por vez; buscar `baixo` e `critico` e juntar, ou pedir filtro múltiplo). `critico: boolean` → `status === "critico"`; `quantidade` → `estoqueAtual`; NCM formatado.
 - **FiscalCard:** `notasService.listar({ de: hoje, ate: hoje })`; `valor` era **string** formatada → `formatarMoeda(valorTotal)`; `hora` de `emitidaEm`; XML/PDF e "Enviar lote para Contador" como em H6.
-- **VendasCard:** buscar cliente por CNPJ (`clientesService.listar({ documento })`) e "Novo Pedido/Nota Fiscal" navega para `/pdv` (hoje sem ação).
+- **VendasCard:** buscar cliente por **CPF ou CNPJ** (`clientesService.listar({ documento })`) e "Novo Pedido/Nota Fiscal" navega para `/pdv` (hoje sem ação). **Correção (H14):** o campo hoje é só "Buscar Cliente por CNPJ" (`id="cnpj"`, placeholder `00.000.000/0000-00`); trocar por "Buscar Cliente por CPF ou CNPJ", com máscara automática (11 dígitos → `000.000.000-00`, 14 → `00.000.000/0000-00`) e validação dos dígitos. Ao achar o cliente, levar o `clienteId` ao PDV (parâmetro de rota) para não digitar de novo.
 **Aceite:** os três cards mostram dados reais e os botões agem.
 
 ### H12 — Remoção de mocks e limpeza final
@@ -198,6 +205,7 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 - `RotaProtegida` (wrapper de rota): lê `user.grupo` via `useAuth()`; sem permissão, redireciona para `/acesso-negado` (não para `/login`, pois o usuário está logado). É aplicada às rotas filhas em `routes.ts`, sem alterar as páginas.
 - `Sidebar` usa o mesmo mapa e **esconde** os itens que o grupo não pode acessar (inclusive o submenu Fiscal inteiro se nenhum item for permitido).
 - `pages/AcessoNegado.tsx`: mensagem clara e botão de voltar ao início (`/`).
+- **Formulários de usuários (H14):** se o sistema tiver cadastro de usuários e grupos, ele é uma tela nova (nome, e-mail, senha, grupo, ativo). Depende de Q9; não entra na H13 até ser confirmado.
 - `services/http.ts`: resposta **403** vira `ApiError` com `status: 403`; as telas mostram `error.message` (diferente do 401, que desloga).
 - A rota inicial `/` (Home) fica liberada a todos os grupos; se o grupo não tiver acesso ao PDV, o botão "Novo Pedido/Nota Fiscal" do `VendasCard` deve ser ocultado ou desabilitado (ver H11).
 
@@ -208,6 +216,42 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 - O menu lateral não mostra o que o grupo não acessa.
 - Usuário com permissão navega normalmente; recarregar a página em uma rota permitida continua funcionando (o grupo vem de `/auth/me`, então o guard aguarda `carregando`).
 - Um 403 do back aparece como mensagem na tela sem deslogar.
+
+### H14 — Inventário e revisão dos formulários
+**Por quê:** ninguém tinha conferido se cada tela tem os campos que a regra de negócio pede. A revisão de 2026-09-26 achou lacunas (ex.: a busca de cliente na Home só aceitava CNPJ, e o PDV aceita CPF). Esta história é o **inventário de referência**: cada correção de campo vive na história da tela correspondente (coluna "Onde entra"), e este quadro deve ser atualizado quando uma delas terminar.
+**Arquivos:** só leitura para o inventário; as correções tocam nas telas de cada história.
+
+**Inventário por tela** (estado do código em 2026-09-26; "sem estado" = campo solto, sem `signal` ligado):
+
+| Tela | Campos existentes | Lacunas encontradas | Onde entra |
+|---|---|---|---|
+| Login | e-mail, senha | Nenhuma de campo; mensagem de erro vem do back | H0.3 |
+| Home · card Vendas | busca por **CNPJ** | **Falta CPF**; sem máscara nem validação; botão "Novo Pedido/Nota Fiscal" sem ação | H11 |
+| Home · cards Estoque e Fiscal | nenhum (só botões) | Sem formulário; ações XML/PDF/lote dependem do back | H11 |
+| PDV · cliente | CNPJ/CPF (NF-e) ou CPF opcional (NFC-e), nome/razão social | Sem estado; sem máscara por dígitos; sem validação; sem cadastro rápido | H5 |
+| PDV · produtos e pagamento | busca de produto, desconto (R$), método, bandeira, destino do dinheiro | Desconto sem limite; busca e "Adicionar Produto" sem ação | H5 |
+| Clientes | busca (nome, documento, e-mail) | **Não há formulário de cadastro/edição**; sem confirmação de exclusão | H3 |
+| Estoque | busca; modal de produto (código, NCM, nome, estoque atual e mínimo, custo, venda) | Falta validar NCM (8 dígitos), preços ≥ 0 e código único; "Novo Produto" e exclusão sem confirmação | H4 |
+| Painel Fiscal | nenhum campo | **"Filtrar" não abre formulário** (status, período); "Emitir NF-e" sem destino definido | H6 |
+| Cancelamento | busca; justificativa | Validação de ≥ 15 caracteres já existe; o prazo de 24 h é do back | H7 |
+| Inutilização | série, número inicial, número final, justificativa | Validações locais existem; falta usar `erro` do back | H8 |
+| Nota de Devolução | busca de nota; quantidade por item; motivo | "Adicionar item" sem ação (Q4); motivo obrigatório? (Q4) | H9 |
+| Nota de Entrada | importar XML; fornecedor (CNPJ, razão social, UF); número, série, natureza, emissão, entrada, chave de acesso; itens | **Falta o campo `ie`**; sem validação de CNPJ/chave; "Importar XML" sem handler | H10 |
+| Fornecedor (cadastro) | — | Existe o tipo `Fornecedor` (`types/`), mas nenhuma tela; hoje o fornecedor só nasce dentro da nota de entrada (Q10) | novo, após Q10 |
+| Usuários e grupos | — | Sem tela; depende de Q9 | H13 |
+
+**Regras transversais de formulário** (aplicar em todas as telas acima, uma vez, num helper em `src/app/lib/`):
+- **Documento:** 11 dígitos = CPF, 14 = CNPJ (mesma regra de `formatarDocumento`); máscara enquanto digita; validação dos dígitos verificadores; envia só dígitos ao back.
+- **Erro por campo:** mensagem embaixo do campo e `aria-invalid`; campos obrigatórios com `*`; não bloquear o envio sem dizer por quê.
+- **Estado:** todo campo ligado a `signal` ou formulário reativo (hoje há vários soltos, sobretudo no PDV e na Home).
+- **Busca:** com *debounce* (~300 ms) e ignorando máscara ao comparar documento ou telefone.
+- **Exclusões:** sempre com confirmação.
+
+**Fazer:**
+- Criar `src/app/lib/documento.ts` com `mascararDocumento`, `validarCpf`, `validarCnpj` e `tipoDocumentoPorDigitos`, com testes (`npm test`), antes de H3, H5, H10 e H11 usarem.
+- Revisar este quadro contra o PDF do TCC (requisitos funcionais e Apêndice A) para achar telas ou campos que o projeto exige e ainda não existem. Ainda **não feito**: o PDF não foi relido nesta revisão.
+- Conferir cada linha no navegador quando a história da tela começar (o inventário veio da leitura dos templates, não da tela rodando).
+**Aceite:** todas as lacunas do quadro têm dono (história) ou pergunta em aberto; helper de documento com testes; quadro atualizado conforme as histórias avançam.
 
 ---
 
@@ -222,6 +266,9 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 | Q5 | O back oferece contadores prontos (clientes por tipo, notas do dia) ou o front deriva da lista? Filtro de estoque aceita vários status? | H3, H6, H11 |
 | Q6 | Quais são os grupos de acesso (nomes exatos, ex.: `admin`, `vendedor`, `estoquista`, `fiscal`)? Um usuário tem um grupo só ou vários? O back devolve o grupo em `/auth/login` e `/auth/me` (em qual campo)? | H13 |
 | Q7 | Matriz de permissões: quais rotas cada grupo acessa (`/pdv`, `/clientes`, `/estoque`, `/fiscal`, `/cancelamento`, `/inutilizacao`, `/devolucao`, `/entrada`)? Além de ver a tela, algum grupo só pode *consultar* (sem criar/editar/excluir)? | H13 |
+| Q8 | Cliente não encontrado na busca do PDV/Home: o front pode cadastrar na hora (`POST /clientes`) ou a venda segue só com o nome digitado? Para NFC-e com CPF que não está no cadastro, o CPF vai só na nota? | H5, H11 |
+| Q9 | O sistema terá tela de cadastro de usuários e grupos, ou os usuários são criados só no back/banco? | H13, H14 |
+| Q10 | Fornecedor precisa de cadastro próprio (CRUD) ou basta o que entra pela nota de entrada? | H14 |
 
 ---
 
@@ -234,3 +281,4 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 | 2026-09-24 | Adicionada H13 (guard de rota por grupo de acesso) e perguntas Q6/Q7. Só planejamento: nada implementado, aguardando a definição dos grupos e da matriz de permissões. |
 | 2026-09-26 | H1 feita: `src/app/lib/format.ts` e `download.ts` (funções puras, sem uso nas telas ainda). Verificado com asserções em Node; sem `tsc` (H2). `formatarNumeroNota` usa 6 dígitos por padrão, como nos mocks. |
 | 2026-09-26 | Front traduzido de React para Angular 22 (standalone, signals, Tailwind 4, `lucide-angular`), mantendo rotas, mocks, login mock de dev e regras da H0.3 (token só em `sessionStorage`). Código React preservado em `referencia-react/`. `ng build` (com `strict` + `strictTemplates`) e `ng test` passam; capturas Angular × React em `docs/telas/`. H2 coberta pelo `strict`. Serviços viraram classes `@Injectable`; o `authService` da API virou `AuthApiService`; `.env.example`/`VITE_API_URL` saíram em favor de `src/environments/`. |
+| 2026-09-26 | Revisão dos formulários: criada a H14 (inventário por tela e regras transversais). Lacunas registradas nas histórias H3, H5, H6, H10, H11 e H13; perguntas Q8–Q10. Achado principal: o card de vendas da Home só buscava por CNPJ (falta CPF; corrigir na H11). Levantamento feito pela leitura dos templates; falta conferir contra o PDF do TCC e no navegador. Nada implementado. |
