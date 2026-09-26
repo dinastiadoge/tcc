@@ -394,7 +394,7 @@ Contratos que o back precisa respeitar para esta base funcionar:
 - Erros respondem JSON com `{ "message": "..." }`.
 - Os campos usam os nomes de `types/index.ts` (por exemplo `estoqueAtual`, não `estoque`).
 
-> Sem o back no ar, o login **falha** (não existe mais credencial local).
+> Sem o back no ar, o login falha em produção. Em dev (`vite`), `authService` tem um login mock: `admin@autopecas.com` / `admin123` (desligue com `VITE_MOCK_AUTH=false`).
 
 ## 9. Checklist do que falta
 
