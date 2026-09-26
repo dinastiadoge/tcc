@@ -1,0 +1,186 @@
+<div class="max-w-7xl mx-auto p-4 sm:p-6 md:p-8">
+  <div class="mb-6 md:mb-8">
+    <h1 class="text-2xl sm:text-3xl text-gray-900 mb-2">Usuários e Grupos</h1>
+    <p class="text-sm sm:text-base text-gray-600">
+      Quem acessa o sistema e o que cada grupo pode fazer
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+    @for (stat of estatisticas(); track stat.label) {
+      <div class="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs sm:text-sm text-gray-600 mb-1">{{ stat.label }}</p>
+            <p class="text-xl sm:text-2xl text-gray-900">{{ stat.valor }}</p>
+          </div>
+          <div class="p-2 sm:p-3 rounded-lg" [class]="stat.cor">
+            <lucide-icon [img]="stat.icone" [size]="20" />
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4 sm:mb-6">
+      <div class="flex flex-wrap gap-2 sm:gap-3">
+        <button
+          type="button"
+          (click)="filtroGrupo.set('todos')"
+          class="px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base"
+          [class]="filtroGrupo() === 'todos' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+        >
+          Todos
+        </button>
+        @for (g of GRUPOS; track g.valor) {
+          <button
+            type="button"
+            (click)="filtroGrupo.set(g.valor)"
+            class="px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base"
+            [class]="filtroGrupo() === g.valor ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+          >
+            {{ g.rotulo }}
+          </button>
+        }
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1 sm:w-72">
+          <input
+            type="text"
+            placeholder="Buscar por nome ou e-mail..."
+            aria-label="Buscar usuário"
+            [(ngModel)]="busca"
+            class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          />
+          <lucide-icon [img]="SearchIcon" [size]="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        </div>
+        <button
+          type="button"
+          (click)="formulario.set('novo')"
+          class="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors whitespace-nowrap"
+        >
+          <lucide-icon [img]="PlusIcon" [size]="18" />
+          <span>Novo Usuário</span>
+        </button>
+      </div>
+    </div>
+
+    @if (aviso()) {
+      <p class="mb-4 px-3 py-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg" role="alert">
+        {{ aviso() }}
+      </p>
+    }
+
+    <div class="overflow-x-auto -mx-4 sm:mx-0">
+      <table class="w-full min-w-[760px]">
+        <thead>
+          <tr class="border-b border-gray-200">
+            <th class="text-left py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Nome</th>
+            <th class="text-left py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">E-mail</th>
+            <th class="text-left py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Grupo</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Último acesso</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Status</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (u of filtrados(); track u.id) {
+            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+              <td class="py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-900">{{ u.nome }}</td>
+              <td class="py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">{{ u.email }}</td>
+              <td class="py-3 px-2 sm:px-3">
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs" [class]="classeGrupo(u.grupo)">
+                  {{ rotuloGrupo(u.grupo) }}
+                </span>
+              </td>
+              <td class="py-3 px-2 sm:px-3 text-center text-xs sm:text-sm text-gray-600">{{ u.ultimoAcesso }}</td>
+              <td class="py-3 px-2 sm:px-3 text-center">
+                @if (u.ativo) {
+                  <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-700">Ativo</span>
+                } @else {
+                  <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">Inativo</span>
+                }
+              </td>
+              <td class="py-3 px-2 sm:px-3">
+                <div class="flex items-center justify-center gap-1 sm:gap-2">
+                  <button
+                    type="button"
+                    (click)="formulario.set(u)"
+                    class="p-1 sm:p-1.5 hover:bg-blue-50 text-blue-600 rounded transition-colors"
+                    title="Editar"
+                    aria-label="Editar usuário"
+                  >
+                    <lucide-icon [img]="EditIcon" [size]="14" class="sm:w-4 sm:h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    (click)="alternarAtivo(u)"
+                    class="p-1 sm:p-1.5 hover:bg-gray-100 text-gray-600 rounded transition-colors"
+                    [title]="u.ativo ? 'Desativar' : 'Ativar'"
+                    [attr.aria-label]="u.ativo ? 'Desativar usuário' : 'Ativar usuário'"
+                  >
+                    <lucide-icon [img]="u.ativo ? UserXIcon : UserCheckIcon" [size]="14" class="sm:w-4 sm:h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    (click)="pedirExclusao(u)"
+                    class="p-1 sm:p-1.5 hover:bg-red-50 text-red-600 rounded transition-colors"
+                    title="Excluir"
+                    aria-label="Excluir usuário"
+                  >
+                    <lucide-icon [img]="Trash2Icon" [size]="14" class="sm:w-4 sm:h-4" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (filtrados().length === 0) {
+      <div class="text-center py-12">
+        <lucide-icon [img]="UserCogIcon" [size]="48" class="mx-auto text-gray-400 mb-4" />
+        <p class="text-gray-600">Nenhum usuário encontrado</p>
+      </div>
+    }
+  </div>
+
+  <div class="mt-4 sm:mt-6 bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200">
+    <h2 class="flex items-center gap-2 text-base sm:text-lg text-gray-900 mb-3">
+      <lucide-icon [img]="ShieldIcon" [size]="18" class="text-blue-600" />
+      Grupos de acesso
+    </h2>
+    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      @for (g of GRUPOS; track g.valor) {
+        <li class="flex items-start gap-3 p-3 rounded-lg border border-gray-200">
+          <span class="inline-flex items-center px-2 py-1 rounded text-xs flex-shrink-0" [class]="classeGrupo(g.valor)">
+            {{ g.rotulo }}
+          </span>
+          <span class="text-sm text-gray-600">{{ g.descricao }}</span>
+        </li>
+      }
+    </ul>
+  </div>
+</div>
+
+@if (formulario() !== null) {
+  <app-modal-usuario
+    [usuario]="editando()"
+    [existentes]="usuarios()"
+    [ultimoAdmin]="ehUltimoAdmin(editando())"
+    (salvar)="salvar($event)"
+    (fechar)="formulario.set(null)"
+  />
+}
+
+@if (excluindo(); as alvo) {
+  <app-modal-confirmar
+    titulo="Excluir usuário?"
+    [mensagem]="'Remover ' + alvo.nome + ' (' + alvo.email + ')? Esta pessoa perde o acesso ao sistema.'"
+    (confirmar)="confirmarExclusao()"
+    (cancelar)="excluindo.set(null)"
+  />
+}

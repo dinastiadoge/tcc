@@ -7,7 +7,7 @@
   </div>
 
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-    @for (stat of estatisticas; track $index) {
+    @for (stat of estatisticas(); track $index) {
       <div class="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200">
         <div class="flex items-center justify-between">
           <div>
@@ -62,7 +62,10 @@
           />
           <lucide-icon [img]="SearchIcon" [size]="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         </div>
-        <button class="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors whitespace-nowrap">
+        <button
+          (click)="cadastrando.set(true)"
+          class="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors whitespace-nowrap"
+        >
           <lucide-icon [img]="PlusIcon" [size]="18" />
           <span>Novo Cliente</span>
         </button>
@@ -153,3 +156,7 @@
     }
   </div>
 </div>
+
+@if (cadastrando()) {
+  <app-modal-novo-cliente (salvar)="cadastrar($event)" (fechar)="cadastrando.set(false)" />
+}

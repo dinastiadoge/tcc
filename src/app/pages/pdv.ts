@@ -18,6 +18,9 @@ import {
   Vault,
   X,
 } from 'lucide-angular';
+import { ClientesStore, NovoCliente } from '../core/clientes.store';
+import { mascararDocumento, tipoDocumentoPorDigitos, validarDocumento } from '../lib/documento';
+import { ModalNovoCliente } from './modal-novo-cliente';
 
 interface ItemCarrinho {
   id: number;
@@ -34,6 +37,7 @@ type Modalidade = 'fisica' | 'virtual';
 type DestinoMoeda = 'banco' | 'cofre';
 type MetodoPagamento = 'dinheiro' | 'credito' | 'debito' | 'pix' | 'boleto';
 type BandeiraCartao = 'mastercard' | 'visa' | 'elo' | 'outros';
+type EstadoCliente = 'vazio' | 'digitando' | 'invalido' | 'so-cpf' | 'encontrado' | 'nao-encontrado';
 
 /** Dá foco ao elemento assim que ele é renderizado (equivale ao `autoFocus` do React). */
 @Directive({ selector: '[appAutofocus]' })
@@ -46,10 +50,12 @@ export class Autofocus {
 
 @Component({
   selector: 'app-pdv',
-  imports: [FormsModule, LucideAngularModule, Autofocus],
+  imports: [FormsModule, LucideAngularModule, Autofocus, ModalNovoCliente],
   templateUrl: './pdv.html',
 })
 export class PDV {
+  private readonly clientes = inject(ClientesStore);
+
   protected readonly CheckIcon = Check;
   protected readonly BuildingIcon = Building;
   protected readonly DollarSignIcon = DollarSign;
@@ -81,6 +87,31 @@ export class PDV {
 
   protected readonly tipoDocumento = signal<TipoDocumento>('nfe');
   protected readonly consumidorIdentificado = signal(true);
+
+  // Cliente (Q8): busca por CPF/CNPJ; se não existir, cadastra na hora ou segue só com o nome digitado.
+  protected readonly documento = signal('');
+  protected readonly nomeDigitado = signal('');
+  protected readonly seguirSemCadastro = signal(false);
+  protected readonly cadastrando = signal(false);
+
+  protected readonly estadoCliente = computed<EstadoCliente>(() => {
+    const documento = this.documento();
+    if (!documento) return 'vazio';
+    const tipo = tipoDocumentoPorDigitos(documento);
+    if (!tipo) return 'digitando';
+    if (this.tipoDocumento() === 'nfce' && tipo === 'cnpj') return 'so-cpf';
+    // Cadastro existente vale antes da validação (os mocks têm documentos fictícios).
+    if (this.clientes.buscarPorDocumento(documento)) return 'encontrado';
+    return validarDocumento(documento) ? 'nao-encontrado' : 'invalido';
+  });
+
+  protected readonly clienteEncontrado = computed(() =>
+    this.estadoCliente() === 'encontrado'
+      ? (this.clientes.buscarPorDocumento(this.documento()) ?? null)
+      : null,
+  );
+
+  protected readonly nomeExibido = computed(() => this.clienteEncontrado()?.nome ?? this.nomeDigitado());
   protected readonly carrinho = signal<ItemCarrinho[]>([
     {
       id: 1,
@@ -115,6 +146,22 @@ export class PDV {
   protected readonly usaCartao = computed(
     () => this.metodoPagamento() === 'credito' || this.metodoPagamento() === 'debito',
   );
+
+  protected aoDigitarDocumento(event: Event) {
+    const campo = event.target as HTMLInputElement;
+    campo.value = mascararDocumento(campo.value);
+    this.documento.set(campo.value);
+    this.seguirSemCadastro.set(false);
+  }
+
+  protected aoDigitarNome(event: Event) {
+    this.nomeDigitado.set((event.target as HTMLInputElement).value);
+  }
+
+  protected cadastrarCliente(dados: NovoCliente) {
+    this.clientes.adicionar(dados);
+    this.cadastrando.set(false);
+  }
 
   private atualizarItem(id: number, mudar: (item: ItemCarrinho) => ItemCarrinho) {
     this.carrinho.update((lista) => lista.map((item) => (item.id === id ? mudar(item) : item)));

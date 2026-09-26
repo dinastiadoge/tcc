@@ -15,6 +15,8 @@ import {
   PackagePlus,
   RotateCcw,
   ShoppingCart,
+  Truck,
+  UserCog,
   Users,
   X,
   XCircle,
@@ -50,6 +52,8 @@ export class Sidebar {
     { icon: ShoppingCart, label: 'PDV / Vendas', path: '/pdv' },
     { icon: Users, label: 'Clientes', path: '/clientes' },
     { icon: Package, label: 'Estoque', path: '/estoque' },
+    { icon: Truck, label: 'Fornecedores', path: '/fornecedores' },
+    { icon: UserCog, label: 'Usuários', path: '/usuarios' },
   ];
 
   protected readonly menuFiscal: ItemMenu[] = [

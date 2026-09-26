@@ -226,19 +226,19 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 | Tela | Campos existentes | Lacunas encontradas | Onde entra |
 |---|---|---|---|
 | Login | e-mail, senha | Nenhuma de campo; mensagem de erro vem do back | H0.3 |
-| Home · card Vendas | busca por **CNPJ** | **Falta CPF**; sem máscara nem validação; botão "Novo Pedido/Nota Fiscal" sem ação | H11 |
+| Home · card Vendas | busca por CPF ou CNPJ (máscara, validação, cliente não encontrado → cadastro rápido; feito em 2026-09-26, Q8) | Botão "Novo Pedido/Nota Fiscal" sem ação; busca ainda em memória (mock) | H11 |
 | Home · cards Estoque e Fiscal | nenhum (só botões) | Sem formulário; ações XML/PDF/lote dependem do back | H11 |
-| PDV · cliente | CNPJ/CPF (NF-e) ou CPF opcional (NFC-e), nome/razão social | Sem estado; sem máscara por dígitos; sem validação; sem cadastro rápido | H5 |
+| PDV · cliente | CNPJ/CPF (NF-e) ou CPF opcional (NFC-e), nome/razão social; máscara por dígitos, validação, busca no cadastro, cliente não encontrado → cadastrar na hora ou seguir só com nome/CPF na nota (feito em 2026-09-26, Q8) | NFC-e recusa CNPJ; falta enviar `clienteId`/nome à venda (H5) | H5 |
 | PDV · produtos e pagamento | busca de produto, desconto (R$), método, bandeira, destino do dinheiro | Desconto sem limite; busca e "Adicionar Produto" sem ação | H5 |
-| Clientes | busca (nome, documento, e-mail) | **Não há formulário de cadastro/edição**; sem confirmação de exclusão | H3 |
+| Clientes | busca (nome, documento, e-mail); **"Novo Cliente"** abre o cadastro (modal compartilhado com PDV e Home, 2026-09-26) | Falta edição; "Excluir" sem ação nem confirmação (usar `ModalConfirmar`) | H3 |
 | Estoque | busca; modal de produto (código, NCM, nome, estoque atual e mínimo, custo, venda) | Falta validar NCM (8 dígitos), preços ≥ 0 e código único; "Novo Produto" e exclusão sem confirmação | H4 |
 | Painel Fiscal | nenhum campo | **"Filtrar" não abre formulário** (status, período); "Emitir NF-e" sem destino definido | H6 |
 | Cancelamento | busca; justificativa | Validação de ≥ 15 caracteres já existe; o prazo de 24 h é do back | H7 |
 | Inutilização | série, número inicial, número final, justificativa | Validações locais existem; falta usar `erro` do back | H8 |
 | Nota de Devolução | busca de nota; quantidade por item; motivo | "Adicionar item" sem ação (Q4); motivo obrigatório? (Q4) | H9 |
 | Nota de Entrada | importar XML; fornecedor (CNPJ, razão social, UF); número, série, natureza, emissão, entrada, chave de acesso; itens | **Falta o campo `ie`**; sem validação de CNPJ/chave; "Importar XML" sem handler | H10 |
-| Fornecedor (cadastro) | — | Existe o tipo `Fornecedor` (`types/`), mas nenhuma tela; hoje o fornecedor só nasce dentro da nota de entrada (Q10) | novo, após Q10 |
-| Usuários e grupos | — | Sem tela; depende de Q9 | H13 |
+| Fornecedor (cadastro) | tela `/fornecedores`: lista, busca, novo/editar (CNPJ válido e único, razão social, IE, UF), exclusão com confirmação (2026-09-26, assume Q10 = sim; mock) | Nota de Entrada ainda não escolhe fornecedor do cadastro; sem serviço/endpoint | novo, após Q10 |
+| Usuários e grupos | tela `/usuarios`: lista, busca, filtro por grupo, novo/editar (nome, e-mail único, senha ≥ 8, grupo, ativo), ativar/desativar, exclusão com confirmação; barra tirar o último admin ativo (2026-09-26, assume Q9 = sim; mock) | Grupos são provisórios (Q6) e não há matriz de permissões (Q7); sem endpoint; a tela ainda não é protegida por grupo | H13 |
 
 **Regras transversais de formulário** (aplicar em todas as telas acima, uma vez, num helper em `src/app/lib/`):
 - **Documento:** 11 dígitos = CPF, 14 = CNPJ (mesma regra de `formatarDocumento`); máscara enquanto digita; validação dos dígitos verificadores; envia só dígitos ao back.
@@ -248,7 +248,7 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 - **Exclusões:** sempre com confirmação.
 
 **Fazer:**
-- Criar `src/app/lib/documento.ts` com `mascararDocumento`, `validarCpf`, `validarCnpj` e `tipoDocumentoPorDigitos`, com testes (`npm test`), antes de H3, H5, H10 e H11 usarem.
+- ~~Criar `src/app/lib/documento.ts` com `mascararDocumento`, `validarCpf`, `validarCnpj` e `tipoDocumentoPorDigitos`, com testes~~ **Feito em 2026-09-26** (também `validarDocumento`); já usado pelas telas de cliente e fornecedor. Falta H10 (nota de entrada) usar.
 - Revisar este quadro contra o PDF do TCC (requisitos funcionais e Apêndice A) para achar telas ou campos que o projeto exige e ainda não existem. Ainda **não feito**: o PDF não foi relido nesta revisão.
 - Conferir cada linha no navegador quando a história da tela começar (o inventário veio da leitura dos templates, não da tela rodando).
 **Aceite:** todas as lacunas do quadro têm dono (história) ou pergunta em aberto; helper de documento com testes; quadro atualizado conforme as histórias avançam.
@@ -270,6 +270,8 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 | Q9 | O sistema terá tela de cadastro de usuários e grupos, ou os usuários são criados só no back/banco? | H13, H14 |
 | Q10 | Fornecedor precisa de cadastro próprio (CRUD) ou basta o que entra pela nota de entrada? | H14 |
 
+**Telas já feitas para Q8–Q10 (com dados mock):** a interface foi construída assumindo o caminho mais completo de cada pergunta, para o usuário ver e validar. **Q8:** PDV e Home oferecem "Cadastrar cliente" (modal) **e** "Seguir só com o nome digitado / CPF na nota". **Q9:** tela `/usuarios`. **Q10:** tela `/fornecedores`. Se o back responder o contrário, a saída é remover a rota e o item de menu (Q9/Q10) ou esconder o botão de cadastro (Q8); nada mais depende delas.
+
 ---
 
 ## Registro
@@ -282,3 +284,4 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 | 2026-09-26 | H1 feita: `src/app/lib/format.ts` e `download.ts` (funções puras, sem uso nas telas ainda). Verificado com asserções em Node; sem `tsc` (H2). `formatarNumeroNota` usa 6 dígitos por padrão, como nos mocks. |
 | 2026-09-26 | Front traduzido de React para Angular 22 (standalone, signals, Tailwind 4, `lucide-angular`), mantendo rotas, mocks, login mock de dev e regras da H0.3 (token só em `sessionStorage`). Código React preservado em `referencia-react/`. `ng build` (com `strict` + `strictTemplates`) e `ng test` passam; capturas Angular × React em `docs/telas/`. H2 coberta pelo `strict`. Serviços viraram classes `@Injectable`; o `authService` da API virou `AuthApiService`; `.env.example`/`VITE_API_URL` saíram em favor de `src/environments/`. |
 | 2026-09-26 | Revisão dos formulários: criada a H14 (inventário por tela e regras transversais). Lacunas registradas nas histórias H3, H5, H6, H10, H11 e H13; perguntas Q8–Q10. Achado principal: o card de vendas da Home só buscava por CNPJ (falta CPF; corrigir na H11). Levantamento feito pela leitura dos templates; falta conferir contra o PDF do TCC e no navegador. Nada implementado. |
+| 2026-09-26 | Telas das perguntas Q8, Q9 e Q10 (mock, assumindo "sim" em cada uma): cadastro rápido de cliente (modal) no PDV, na Home e em Clientes, com fluxo "cliente não encontrado"; telas `/fornecedores` e `/usuarios` com menu lateral; `ModalConfirmar` para exclusões; helper `lib/documento.ts` com testes (H14). `ng build` (strict) e `ng test` (20 testes) passam; conferido no Chrome (desktop e mobile). Nada ligado ao back; validar as respostas Q8–Q10 antes de avançar H3, H5 e H13. |

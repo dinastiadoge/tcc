@@ -13,6 +13,9 @@ export type StatusNota = "autorizada" | "cancelada" | "processando";
 export type TipoNota = "NFE" | "NFCE" | "DEVOLUCAO" | "ENTRADA";
 export type StatusVenda = "orcamento" | "finalizada";
 
+/** Provisório: nomes de exemplo da H13 até a Q6 confirmar os grupos reais do back. */
+export type GrupoAcesso = "admin" | "vendedor" | "estoquista" | "fiscal";
+
 export interface Usuario {
   id: number;
   nome: string;

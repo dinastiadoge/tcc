@@ -1,0 +1,101 @@
+<div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="titulo-fornecedor">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[95vh] overflow-y-auto">
+    <div class="flex items-center justify-between p-5 border-b border-gray-200">
+      <h3 id="titulo-fornecedor" class="text-lg text-gray-900">
+        {{ fornecedor() ? 'Editar Fornecedor' : 'Novo Fornecedor' }}
+      </h3>
+      <button
+        type="button"
+        (click)="fechar.emit()"
+        class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+        aria-label="Fechar"
+      >
+        <lucide-icon [img]="XIcon" [size]="20" class="text-gray-500" />
+      </button>
+    </div>
+
+    <form (submit)="handleSubmit($event)" class="p-5 space-y-4" novalidate>
+      <div>
+        <label for="forn-cnpj" class="block text-xs text-gray-600 mb-1.5">CNPJ *</label>
+        <input
+          id="forn-cnpj"
+          type="text"
+          inputmode="numeric"
+          [value]="cnpj()"
+          (input)="aoDigitarCnpj($event)"
+          placeholder="00.000.000/0000-00"
+          [attr.aria-invalid]="tentouSalvar() && erros().cnpj ? 'true' : null"
+          class="w-full px-3 py-2 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+          [class]="tentouSalvar() && erros().cnpj ? 'border-red-400' : 'border-gray-300'"
+        />
+        @if (tentouSalvar() && erros().cnpj) {
+          <p class="mt-1 text-xs text-red-600">{{ erros().cnpj }}</p>
+        }
+      </div>
+
+      <div>
+        <label for="forn-razao" class="block text-xs text-gray-600 mb-1.5">Razão Social *</label>
+        <input
+          id="forn-razao"
+          type="text"
+          [value]="razaoSocial()"
+          (input)="razaoSocial.set(texto($event))"
+          [attr.aria-invalid]="tentouSalvar() && erros().razaoSocial ? 'true' : null"
+          class="w-full px-3 py-2 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+          [class]="tentouSalvar() && erros().razaoSocial ? 'border-red-400' : 'border-gray-300'"
+        />
+        @if (tentouSalvar() && erros().razaoSocial) {
+          <p class="mt-1 text-xs text-red-600">{{ erros().razaoSocial }}</p>
+        }
+      </div>
+
+      <div class="grid grid-cols-3 gap-4">
+        <div class="col-span-2">
+          <label for="forn-ie" class="block text-xs text-gray-600 mb-1.5">Inscrição Estadual (IE)</label>
+          <input
+            id="forn-ie"
+            type="text"
+            [value]="ie()"
+            (input)="ie.set(texto($event))"
+            placeholder="Somente números ou ISENTO"
+            [attr.aria-invalid]="tentouSalvar() && erros().ie ? 'true' : null"
+            class="w-full px-3 py-2 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+            [class]="tentouSalvar() && erros().ie ? 'border-red-400' : 'border-gray-300'"
+          />
+          @if (tentouSalvar() && erros().ie) {
+            <p class="mt-1 text-xs text-red-600">{{ erros().ie }}</p>
+          }
+        </div>
+        <div>
+          <label for="forn-uf" class="block text-xs text-gray-600 mb-1.5">UF</label>
+          <select
+            id="forn-uf"
+            (change)="uf.set(texto($event))"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            @for (u of UFS; track u) {
+              <option [value]="u" [selected]="u === uf()">{{ u }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button
+          type="button"
+          (click)="fechar.emit()"
+          class="flex-1 px-4 py-2.5 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+        >
+          <lucide-icon [img]="SaveIcon" [size]="15" />
+          Salvar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
