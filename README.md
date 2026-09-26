@@ -1,21 +1,31 @@
 # TCC
 
-Front-end de um sistema de PDV e gestão fiscal (vendas, clientes, estoque e notas fiscais), feito com React, Vite e Tailwind. O projeto original está no Figma: https://www.figma.com/design/MAlSIV5GZJHlDgVu3WxKof/TCC.
+Front-end de um sistema de PDV e gestão fiscal (vendas, clientes, estoque e notas fiscais), feito com Angular (componentes standalone, signals) e Tailwind 4. O protótipo original foi gerado no Figma (https://www.figma.com/design/MAlSIV5GZJHlDgVu3WxKof/TCC) em React/Vite e foi traduzido para Angular; o código React fica preservado em `referencia-react/`.
 
 ## Como rodar
 
 Execute `npm i` para instalar as dependências.
 
-Execute `npm run dev` para subir o servidor de desenvolvimento.
+Execute `npm start` (`ng serve`) para subir o servidor de desenvolvimento em `http://localhost:4200`. Em desenvolvimento o login é mock (`admin@autopecas.com` / `admin123`); para usar a API real, troque `mockAuth` para `false` em `src/environments/environment.development.ts`.
+
+Outros comandos: `npm run build` (build de produção em `dist/tcc`) e `npm test` (testes com Vitest).
+
+A URL da API fica em `src/environments/` (`apiUrl`; padrão `/api` em produção e `http://localhost:3000` em desenvolvimento).
 
 ## Estrutura do repositório
 
 | Caminho | O que contém |
 |---|---|
 | `src/app/pages/` | Telas: Login, Home, PDV, Clientes, Estoque, Painel Fiscal, Cancelamento, Inutilização, Nota de Devolução e Nota de Entrada |
-| `src/app/components/` | Layout, Sidebar, cards do painel e componentes de UI |
-| `src/app/context/` | Contexto de autenticação |
-| `src/app/routes.ts` | Rotas da aplicação |
+| `src/app/layout/` | Layout, Sidebar e MobileHeader |
+| `src/app/cards/` | Cards da Home (Vendas, Estoque e Fiscal) |
+| `src/app/core/` | `AuthService` (sessão com signals) e `authGuard` |
+| `src/app/services/` | Cliente HTTP (`http.ts`), token em `sessionStorage` e um serviço por recurso |
+| `src/app/types/` | Tipos compartilhados (modelo do back) |
+| `src/app/app.routes.ts` | Rotas da aplicação |
+| `src/environments/` | URL da API e flag do login mock |
+| `referencia-react/` | Código React/Vite original (referência da tradução; não faz parte do build) |
+| `docs/telas/` | Capturas das telas: Angular, React e o diff entre elas |
 | `guidelines/Guidelines.md` | Regras e preferências para agentes de IA |
 | `_bmad/` | Instalação do BMAD (módulos `core` e `bmm`; versão em `_bmad/_config/manifest.yaml`). Gerenciada pelo instalador, não edite à mão. Para mudar o comportamento de uma skill, use `/bmad-customize` |
 | `_bmad-output/` | Documentos gerados pelo BMAD: planejamento, specs e status das sprints |

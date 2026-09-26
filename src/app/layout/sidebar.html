@@ -1,0 +1,95 @@
+@if (isOpen()) {
+  <div class="md:hidden fixed inset-0 bg-black/50 z-40" (click)="closed.emit()"></div>
+}
+
+<aside
+  class="fixed md:static top-0 left-0 h-screen w-64 bg-[#1a1d29] text-white z-50 flex flex-col transition-transform duration-300 ease-in-out"
+  [class]="isOpen() ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
+>
+  <div class="md:hidden absolute top-4 right-4">
+    <button
+      (click)="closed.emit()"
+      class="p-2 hover:bg-white/10 rounded-lg transition-colors"
+      aria-label="Fechar menu"
+    >
+      <lucide-icon [img]="XIcon" [size]="24" />
+    </button>
+  </div>
+
+  <div class="p-6 border-b border-white/10">
+    <h1 class="text-xl text-white">WC Autopeças</h1>
+    <p class="text-sm text-gray-400 mt-1">Sistema de Gestão</p>
+  </div>
+
+  <nav class="flex-1 p-4 overflow-y-auto">
+    <ul class="space-y-1">
+      @for (item of menuPrincipal; track item.path) {
+        <li>
+          <a
+            [routerLink]="item.path"
+            (click)="closed.emit()"
+            class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors"
+            [class]="isActive(item.path) ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white'"
+          >
+            <lucide-icon [img]="item.icon" [size]="20" />
+            <span>{{ item.label }}</span>
+          </a>
+        </li>
+      }
+
+      <!-- Seção Fiscal com submenu -->
+      <li>
+        <button
+          (click)="fiscalAberto.set(!fiscalAberto())"
+          class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors text-left"
+          [class]="isFiscalActive() ? 'bg-blue-600/20 text-blue-300' : 'text-gray-300 hover:bg-white/5 hover:text-white'"
+        >
+          <lucide-icon [img]="FileTextIcon" [size]="20" />
+          <span class="flex-1">Fiscal</span>
+          @if (fiscalAberto()) {
+            <lucide-icon [img]="ChevronDownIcon" [size]="16" />
+          } @else {
+            <lucide-icon [img]="ChevronRightIcon" [size]="16" />
+          }
+        </button>
+
+        @if (fiscalAberto()) {
+          <ul class="mt-1 space-y-1">
+            @for (item of menuFiscal; track item.path) {
+              <li>
+                <a
+                  [routerLink]="item.path"
+                  (click)="closed.emit()"
+                  class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors pl-8"
+                  [class]="isActive(item.path) ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white'"
+                >
+                  <lucide-icon [img]="item.icon" [size]="16" />
+                  <span class="text-sm">{{ item.label }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </li>
+    </ul>
+  </nav>
+
+  <div class="p-4 border-t border-white/10">
+    <div class="flex items-center gap-3 px-3 py-2 mb-2">
+      <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+        <span class="text-xs font-medium">{{ iniciais() }}</span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm text-white truncate">{{ auth.user()?.nome ?? 'Admin' }}</p>
+        <p class="text-xs text-gray-400 truncate">{{ auth.user()?.email ?? '' }}</p>
+      </div>
+    </div>
+    <button
+      (click)="handleLogout()"
+      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+    >
+      <lucide-icon [img]="LogOutIcon" [size]="16" />
+      Sair do sistema
+    </button>
+  </div>
+</aside>

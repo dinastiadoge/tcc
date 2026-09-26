@@ -1,0 +1,121 @@
+@if (produtoEditando(); as produto) {
+  <app-modal-editar-produto
+    [produto]="produto"
+    (salvar)="salvarProduto($event)"
+    (fechar)="produtoEditando.set(null)"
+  />
+}
+
+<div class="max-w-7xl mx-auto p-4 sm:p-6 md:p-8">
+  <div class="mb-6 md:mb-8">
+    <h1 class="text-2xl sm:text-3xl text-gray-900 mb-2">Gestão de Estoque</h1>
+    <p class="text-sm sm:text-base text-gray-600">Controle completo do inventário de autopeças</p>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+    @for (stat of estatisticas; track $index) {
+      <div class="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs sm:text-sm text-gray-600 mb-1">{{ stat.label }}</p>
+            <p class="text-xl sm:text-2xl text-gray-900">{{ stat.valor }}</p>
+          </div>
+          <div class="p-2 sm:p-3 rounded-lg" [class]="classeCor(stat.cor)">
+            <lucide-icon [img]="stat.icone" [size]="20" class="sm:w-6 sm:h-6" />
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+      <h2 class="text-base sm:text-lg text-gray-900">Lista de Produtos</h2>
+      <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <div class="relative flex-1 sm:w-80">
+          <input
+            type="text"
+            placeholder="Buscar por código ou nome..."
+            [(ngModel)]="busca"
+            class="w-full pl-10 pr-4 py-2 sm:py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          />
+          <lucide-icon [img]="SearchIcon" [size]="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        </div>
+        <button class="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors whitespace-nowrap text-sm">
+          <lucide-icon [img]="PlusIcon" [size]="16" />
+          <span>Novo Produto</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto -mx-4 sm:mx-0">
+      <table class="w-full min-w-[800px]">
+        <thead>
+          <tr class="border-b border-gray-200">
+            <th class="text-left py-3 px-2 sm:px-3 text-xs text-gray-500">Código</th>
+            <th class="text-left py-3 px-2 sm:px-3 text-xs text-gray-500">Produto</th>
+            <th class="text-left py-3 px-2 sm:px-3 text-xs text-gray-500">NCM</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs text-gray-500">Estoque</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs text-gray-500">Mínimo</th>
+            <th class="text-right py-3 px-2 sm:px-3 text-xs text-gray-500">Custo</th>
+            <th class="text-right py-3 px-2 sm:px-3 text-xs text-gray-500">Venda</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs text-gray-500">Status</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs text-gray-500">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (produto of produtosFiltrados(); track produto.id) {
+            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+              <td class="py-3 px-2 sm:px-3 text-xs text-gray-500">{{ produto.codigo }}</td>
+              <td class="py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-900">{{ produto.nome }}</td>
+              <td class="py-3 px-2 sm:px-3 text-xs text-gray-500">{{ produto.ncm }}</td>
+              <td class="py-3 px-2 sm:px-3 text-center text-xs sm:text-sm text-gray-900">{{ produto.estoque }}</td>
+              <td class="py-3 px-2 sm:px-3 text-center text-xs text-gray-500">{{ produto.minimo }}</td>
+              <td class="py-3 px-2 sm:px-3 text-right text-xs sm:text-sm text-gray-900">
+                R$ {{ produto.custo.toFixed(2) }}
+              </td>
+              <td class="py-3 px-2 sm:px-3 text-right text-xs sm:text-sm text-gray-900">
+                R$ {{ produto.venda.toFixed(2) }}
+              </td>
+              <td class="py-3 px-2 sm:px-3 text-center">
+                @if (produto.status === 'critico') {
+                  <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-red-100 text-red-700">Crítico</span>
+                } @else if (produto.status === 'baixo') {
+                  <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-orange-100 text-orange-700">Baixo</span>
+                } @else if (produto.status === 'atencao') {
+                  <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-700">Atenção</span>
+                } @else {
+                  <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-700">OK</span>
+                }
+              </td>
+              <td class="py-3 px-2 sm:px-3">
+                <div class="flex items-center justify-center gap-1.5">
+                  <button
+                    (click)="produtoEditando.set(produto)"
+                    class="p-1.5 hover:bg-blue-50 text-blue-600 rounded transition-colors"
+                    title="Editar produto"
+                  >
+                    <lucide-icon [img]="EditIcon" [size]="14" />
+                  </button>
+                  <button
+                    class="p-1.5 hover:bg-red-50 text-red-500 rounded transition-colors"
+                    title="Excluir produto"
+                  >
+                    <lucide-icon [img]="Trash2Icon" [size]="14" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+          @if (produtosFiltrados().length === 0) {
+            <tr>
+              <td colspan="9" class="py-8 text-center text-sm text-gray-400">
+                Nenhum produto encontrado
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

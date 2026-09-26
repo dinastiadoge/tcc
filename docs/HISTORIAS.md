@@ -6,6 +6,8 @@ Backlog vivo da integração. **Ao retomar o trabalho, leia só este arquivo**: 
 
 Legenda: `Feito` · `Pendente` · `Bloqueada` (depende de decisão do back, ver "Perguntas em aberto").
 
+> **Front em Angular (2026-09-26).** O front foi traduzido de React para Angular. Ao ler as histórias abaixo, troque os caminhos `.tsx` pelos equivalentes Angular: `pages/Clientes.tsx` → `pages/clientes.ts` + `clientes.html` (idem para as demais telas), `components/Layout|Sidebar|MobileHeader.tsx` → `layout/`, `components/*Card.tsx` → `cards/*-card.ts`, `context/AuthContext.tsx` → `core/auth.service.ts` + `core/auth.guard.ts`, `routes.ts` → `app.routes.ts`. Estado local (`useState`) virou `signal()`; serviços viraram classes `@Injectable` (`inject(ClientesService)`); `authService` da API chama-se `AuthApiService`. O código React original está em `referencia-react/`.
+
 ## Painel
 
 | ID | História | Status |
@@ -15,7 +17,8 @@ Legenda: `Feito` · `Pendente` · `Bloqueada` (depende de decisão do back, ver 
 | H0.3 | Token em `sessionStorage` e auth assíncrono | Feito |
 | H0.4 | Documentação de mapeamento de classes | Feito |
 | H1 | Utilitários de formatação e download | Feito |
-| H2 | Checagem de tipos (`tsconfig` + `tsc`) | Pendente |
+| H2 | Checagem de tipos (`tsconfig` + `tsc`) | Feito (coberta pelo Angular: `strict` + `strictTemplates` no `ng build`) |
+| H0.5 | Tradução do front de React para Angular | Feito |
 | H3 | Clientes integrado | Pendente |
 | H4 | Estoque integrado | Pendente |
 | H5 | PDV integrado | Bloqueada (Q1, Q2) |
@@ -34,7 +37,7 @@ Ordem sugerida: H1 → H2 → H3 → H4 → H7 → H8 → H10 → H5 → H6 → 
 
 ## Convenções (valem para todas as histórias)
 
-- **Serviços** vêm de `src/app/services` (ex.: `import { clientesService } from "../services"`). Tipos vêm de `src/app/types`.
+- **Serviços** vêm de `src/app/services` e são injetados (ex.: `private readonly clientesService = inject(ClientesService)`, com `import { ClientesService } from '../services'`). Tipos vêm de `src/app/types`.
 - **Dado cru do back, formatação na tela:** documento, telefone e NCM sem máscara; datas ISO 8601; dinheiro em `number`.
 - **Erro:** capturar `ApiError` e mostrar `error.message`. Status `0` = sem conexão.
 - **Carregamento:** cada tela ganha estado `carregando` e `erro` (hoje só há `enviando`/`sucesso`).
@@ -49,23 +52,23 @@ Ordem sugerida: H1 → H2 → H3 → H4 → H7 → H8 → H10 → H5 → H6 → 
 `src/app/types/index.ts`: entidades (`Usuario`, `Cliente`, `Produto`, `Fornecedor`, `Venda`, `VendaItem`, `NotaFiscal`, `NotaFiscalItem`, `Inutilizacao`), enums (`TipoPessoa`, `TipoDocumento`, `Modalidade`, `MetodoPagamento`, `BandeiraCartao`, `DestinoDinheiro`, `StatusEstoque`, `StatusNota`, `TipoNota`, `StatusVenda`) e payloads (`ClienteInput`, `ProdutoInput`, `VendaInput`, `DevolucaoInput`, `EntradaInput`, `InutilizacaoInput`, `LoginResponse`, `ResumoEstoque`).
 
 ### H0.2 — Cliente HTTP e serviços
-`src/app/services/http.ts` (`request`, `requestBlob`, `ApiError`, Bearer token, `VITE_API_URL` com padrão `/api`) e um serviço por recurso:
+`src/app/services/http.ts` (`request`, `requestBlob`, `ApiError`, Bearer token, `environment.apiUrl`) e um serviço `@Injectable({ providedIn: 'root' })` por recurso:
 
 | Serviço | Métodos |
 |---|---|
-| `authService` | `login(email, senha)`, `me()` |
-| `clientesService` | `listar({tipo,busca,documento})`, `criar`, `atualizar(id,…)`, `excluir(id)` |
-| `produtosService` | `listar({busca,status})`, `resumo()`, `criar`, `atualizar(id,…)`, `excluir(id)` |
-| `vendasService` | `criar(VendaInput)` |
-| `notasService` | `listar({status,de,ate})`, `itens(id)`, `baixarXml(id)`, `baixarPdf(id)`, `relatorio(filtro)`, `enviarLoteContador()`, `cancelar(id,justificativa)`, `emitirDevolucao`, `registrarEntrada`, `importarXmlEntrada(File)` |
-| `inutilizacoesService` | `listar()`, `criar(InutilizacaoInput)` |
+| `AuthApiService` (era `authService`) | `login(email, senha)`, `me()` |
+| `ClientesService` | `listar({tipo,busca,documento})`, `criar`, `atualizar(id,…)`, `excluir(id)` |
+| `ProdutosService` | `listar({busca,status})`, `resumo()`, `criar`, `atualizar(id,…)`, `excluir(id)` |
+| `VendasService` | `criar(VendaInput)` |
+| `NotasService` | `listar({status,de,ate})`, `itens(id)`, `baixarXml(id)`, `baixarPdf(id)`, `relatorio(filtro)`, `enviarLoteContador()`, `cancelar(id,justificativa)`, `emitirDevolucao`, `registrarEntrada`, `importarXmlEntrada(File)` |
+| `InutilizacoesService` | `listar()`, `criar(InutilizacaoInput)` |
 
-`.env.example` com `VITE_API_URL`.
+A URL da API fica em `src/environments/environment.ts` (`apiUrl`, padrão `/api`) e `environment.development.ts` (`http://localhost:3000`). Não há mais `.env.example`/`VITE_API_URL`.
 
 ### H0.3 — Token em `sessionStorage` e auth assíncrono
 - Token **só** em `sessionStorage["wc_token"]` (`services/tokenStorage.ts`), nunca `localStorage`.
-- `AuthContext`: `login()` é `Promise<boolean>`; com token salvo, valida em `GET /auth/me` antes de renderizar (`carregando`); 401 limpa o token e desloga; remove o resíduo `localStorage["wc_user"]`.
-- `Layout` aguarda `carregando`. `Login` sem credencial fixa, sem e-mail pré-preenchido e sem atraso simulado.
+- `AuthService` (`core/auth.service.ts`, era `AuthContext`): `login()` é `Promise<boolean>`; com token salvo, valida em `GET /auth/me` antes de renderizar (`carregando`); 401 limpa o token e desloga; remove o resíduo `localStorage["wc_user"]`.
+- `authGuard` (`core/auth.guard.ts`) espera `carregando` e redireciona para `/login`; o `Layout` também volta ao login se a sessão cair. `Login` sem credencial fixa, sem e-mail pré-preenchido e sem atraso simulado.
 - Contrato esperado: `POST /auth/login` → `{ token, usuario }`; `GET /auth/me` → `Usuario`; erros `{ message }`.
 - Sem o back no ar o login falha.
 
@@ -81,10 +84,8 @@ Ainda não há uso nas telas: entra em H3 em diante.
 
 ## Pendentes
 
-### H2 — Checagem de tipos
-**Por quê:** não existe `tsconfig.json`; o `vite build` não checa tipos, então erros de tipo passam despercebidos.
-**Fazer:** adicionar `tsconfig.json` (React JSX, `strict`, alias `@` → `src`, `types: ["vite/client"]`), dependência `typescript` e script `"typecheck": "tsc --noEmit"`. Corrigir o que aparecer (o código atual pode ter erros; os arquivos de `ui/` podem ser excluídos do escopo se poluírem).
-**Aceite:** `npm run typecheck` passa.
+### H2 — Checagem de tipos — **Feito (coberta pelo Angular)**
+Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`, e o `ng build` checa tipos (inclusive dos templates). Não é preciso script `typecheck` separado.
 
 ### H3 — Clientes integrado
 **Arquivos:** `pages/Clientes.tsx`. **Serviço:** `clientesService`.
@@ -177,7 +178,7 @@ Ainda não há uso nas telas: entra em H3 em diante.
 - Apagar as constantes mock de cada tela (`clientesData`, `produtosIniciais`, `notasFiscais`, `notas`, `inutilizacoes`, `notasReferencia`, `itensMock`, listas dos cards) e as `estatisticas` fixas.
 - Remover todos os `setTimeout` que simulam a SEFAZ.
 - Conferir que nenhuma `interface` local duplica `types/`.
-- Rodar `npm run typecheck` (H2) e `npx vite build`.
+- Rodar `npm run build` (o `ng build` já checa tipos, ver H2) e `npm test`.
 - Atualizar `MAPEAMENTO-CLASSES.md` (seções 3, 6 e 7 deixam de ser "estado original").
 
 ### H13 — Guard de rota por grupo de acesso  *(bloqueada: Q6, Q7)*
@@ -232,3 +233,4 @@ Ainda não há uso nas telas: entra em H3 em diante.
 | 2026-09-24 | Criado este arquivo de histórias. |
 | 2026-09-24 | Adicionada H13 (guard de rota por grupo de acesso) e perguntas Q6/Q7. Só planejamento: nada implementado, aguardando a definição dos grupos e da matriz de permissões. |
 | 2026-09-26 | H1 feita: `src/app/lib/format.ts` e `download.ts` (funções puras, sem uso nas telas ainda). Verificado com asserções em Node; sem `tsc` (H2). `formatarNumeroNota` usa 6 dígitos por padrão, como nos mocks. |
+| 2026-09-26 | Front traduzido de React para Angular 22 (standalone, signals, Tailwind 4, `lucide-angular`), mantendo rotas, mocks, login mock de dev e regras da H0.3 (token só em `sessionStorage`). Código React preservado em `referencia-react/`. `ng build` (com `strict` + `strictTemplates`) e `ng test` passam; capturas Angular × React em `docs/telas/`. H2 coberta pelo `strict`. Serviços viraram classes `@Injectable`; o `authService` da API virou `AuthApiService`; `.env.example`/`VITE_API_URL` saíram em favor de `src/environments/`. |

@@ -1,0 +1,112 @@
+<div class="max-w-7xl mx-auto p-4 sm:p-6 md:p-8">
+  <div class="mb-6 md:mb-8">
+    <h1 class="text-2xl sm:text-3xl text-gray-900 mb-2">Painel Fiscal</h1>
+    <p class="text-sm sm:text-base text-gray-600">Gestão de notas fiscais e documentos</p>
+  </div>
+
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+    @for (stat of estatisticas; track $index) {
+      <div class="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200">
+        <p class="text-xs sm:text-sm text-gray-600 mb-1">{{ stat.label }}</p>
+        <p class="text-lg sm:text-2xl" [class]="classeCor(stat.cor)">
+          {{ stat.valor }}
+        </p>
+      </div>
+    }
+  </div>
+
+  <div class="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 mb-4 sm:mb-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <h2 class="text-base sm:text-lg text-gray-900">Ações Rápidas</h2>
+      <div class="flex flex-wrap gap-2 sm:gap-3">
+        <button class="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base">
+          <lucide-icon [img]="FileTextIcon" [size]="16" class="sm:w-[18px] sm:h-[18px]" />
+          <span>Emitir NF-e</span>
+        </button>
+        <button class="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm sm:text-base">
+          <lucide-icon [img]="ArchiveIcon" [size]="16" class="sm:w-[18px] sm:h-[18px]" />
+          <span class="hidden sm:inline">Enviar Lote ao Contador</span>
+          <span class="sm:hidden">Enviar Lote</span>
+        </button>
+        <button class="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm sm:text-base">
+          <lucide-icon [img]="DownloadIcon" [size]="16" class="sm:w-[18px] sm:h-[18px]" />
+          <span class="hidden sm:inline">Exportar Relatório</span>
+          <span class="sm:hidden">Exportar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+      <h2 class="text-base sm:text-lg text-gray-900">Notas Fiscais Recentes</h2>
+      <div class="flex gap-2 sm:gap-3">
+        <button class="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg transition-colors text-sm sm:text-base">
+          <lucide-icon [img]="FilterIcon" [size]="16" class="sm:w-[18px] sm:h-[18px]" />
+          <span>Filtrar</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto -mx-4 sm:mx-0">
+      <table class="w-full min-w-[900px]">
+        <thead>
+          <tr class="border-b border-gray-200">
+            <th class="text-left py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Número</th>
+            <th class="text-left py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Cliente</th>
+            <th class="text-left py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">CNPJ</th>
+            <th class="text-right py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Valor</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Data/Hora</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Status</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (nota of notasFiscais; track nota.id) {
+            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+              <td class="py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-900">
+                {{ nota.numero }}/{{ nota.serie }}
+              </td>
+              <td class="py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-900">{{ nota.cliente }}</td>
+              <td class="py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">{{ nota.cnpj }}</td>
+              <td class="py-3 px-2 sm:px-3 text-right text-xs sm:text-sm text-green-600">
+                R$ {{ nota.valor.toFixed(2) }}
+              </td>
+              <td class="py-3 px-2 sm:px-3 text-center text-xs sm:text-sm text-gray-600">
+                {{ nota.data }} {{ nota.hora }}
+              </td>
+              <td class="py-3 px-2 sm:px-3 text-center">
+                @if (nota.status === 'autorizada') {
+                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-green-100 text-green-700">
+                    <lucide-icon [img]="CheckCircleIcon" [size]="14" />
+                    Autorizada
+                  </span>
+                } @else if (nota.status === 'cancelada') {
+                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-red-100 text-red-700">
+                    <lucide-icon [img]="XCircleIcon" [size]="14" />
+                    Cancelada
+                  </span>
+                } @else {
+                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-700">
+                    <lucide-icon [img]="ClockIcon" [size]="14" />
+                    Processando
+                  </span>
+                }
+              </td>
+              <td class="py-3 px-2 sm:px-3 text-center">
+                <div class="flex items-center justify-center gap-1 sm:gap-2">
+                  <button class="p-1 sm:p-1.5 hover:bg-gray-100 rounded transition-colors" title="Baixar XML">
+                    <lucide-icon [img]="DownloadIcon" [size]="14" class="text-gray-600 sm:w-4 sm:h-4" />
+                  </button>
+                  <button class="p-1 sm:p-1.5 hover:bg-gray-100 rounded transition-colors" title="Baixar PDF">
+                    <lucide-icon [img]="FileTextIcon" [size]="14" class="text-gray-600 sm:w-4 sm:h-4" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

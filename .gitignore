@@ -12,6 +12,7 @@ coverage/
 
 # Cache de ferramentas
 .vite/
+.angular/
 .cache/
 .eslintcache
 .parcel-cache/

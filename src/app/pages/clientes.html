@@ -1,0 +1,155 @@
+<div class="max-w-7xl mx-auto p-4 sm:p-6 md:p-8">
+  <div class="mb-6 md:mb-8">
+    <h1 class="text-2xl sm:text-3xl text-gray-900 mb-2">Gestão de Clientes</h1>
+    <p class="text-sm sm:text-base text-gray-600">
+      Cadastro e gerenciamento de pessoas físicas e jurídicas
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+    @for (stat of estatisticas; track $index) {
+      <div class="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs sm:text-sm text-gray-600 mb-1">{{ stat.label }}</p>
+            <p class="text-xl sm:text-2xl text-gray-900">{{ stat.valor }}</p>
+          </div>
+          <div class="p-2 sm:p-3 rounded-lg" [class]="classeCor(stat.cor)">
+            <lucide-icon [img]="stat.icone" [size]="20" class="sm:w-6 sm:h-6" />
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4 sm:mb-6">
+      <div class="flex flex-wrap gap-2 sm:gap-3">
+        <button
+          (click)="filtroTipo.set('todos')"
+          class="px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base"
+          [class]="filtroTipo() === 'todos' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+        >
+          Todos
+        </button>
+        <button
+          (click)="filtroTipo.set('PF')"
+          class="px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base"
+          [class]="filtroTipo() === 'PF' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+        >
+          <lucide-icon [img]="UserIcon" [size]="16" />
+          <span class="hidden sm:inline">Pessoa Física</span>
+          <span class="sm:hidden">PF</span>
+        </button>
+        <button
+          (click)="filtroTipo.set('PJ')"
+          class="px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base"
+          [class]="filtroTipo() === 'PJ' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+        >
+          <lucide-icon [img]="Building2Icon" [size]="16" />
+          <span class="hidden sm:inline">Pessoa Jurídica</span>
+          <span class="sm:hidden">PJ</span>
+        </button>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1 sm:w-80">
+          <input
+            type="text"
+            placeholder="Buscar por nome, documento ou email..."
+            [(ngModel)]="busca"
+            class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          />
+          <lucide-icon [img]="SearchIcon" [size]="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        </div>
+        <button class="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors whitespace-nowrap">
+          <lucide-icon [img]="PlusIcon" [size]="18" />
+          <span>Novo Cliente</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto -mx-4 sm:mx-0">
+      <table class="w-full min-w-[1000px]">
+        <thead>
+          <tr class="border-b border-gray-200">
+            <th class="text-left py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Tipo</th>
+            <th class="text-left py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Documento</th>
+            <th class="text-left py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Nome/Razão Social</th>
+            <th class="text-left py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Contato</th>
+            <th class="text-left py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Localização</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Compras</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Última Compra</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Status</th>
+            <th class="text-center py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-600">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (cliente of clientesFiltrados(); track cliente.id) {
+            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+              <td class="py-3 px-2 sm:px-3">
+                @if (cliente.tipo === 'PF') {
+                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-green-100 text-green-700">
+                    <lucide-icon [img]="UserIcon" [size]="12" />
+                    PF
+                  </span>
+                } @else {
+                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-purple-100 text-purple-700">
+                    <lucide-icon [img]="Building2Icon" [size]="12" />
+                    PJ
+                  </span>
+                }
+              </td>
+              <td class="py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-900">{{ cliente.documento }}</td>
+              <td class="py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-900">{{ cliente.nome }}</td>
+              <td class="py-3 px-2 sm:px-3">
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center gap-1 text-xs sm:text-sm text-gray-600">
+                    <lucide-icon [img]="MailIcon" [size]="12" />
+                    <span class="truncate max-w-[180px]">{{ cliente.email }}</span>
+                  </div>
+                  <div class="flex items-center gap-1 text-xs sm:text-sm text-gray-600">
+                    <lucide-icon [img]="PhoneIcon" [size]="12" />
+                    {{ cliente.telefone }}
+                  </div>
+                </div>
+              </td>
+              <td class="py-3 px-2 sm:px-3">
+                <div class="flex items-center gap-1 text-xs sm:text-sm text-gray-600">
+                  <lucide-icon [img]="MapPinIcon" [size]="12" />
+                  {{ cliente.cidade }}/{{ cliente.uf }}
+                </div>
+              </td>
+              <td class="py-3 px-2 sm:px-3 text-center text-xs sm:text-sm text-gray-900">{{ cliente.totalCompras }}</td>
+              <td class="py-3 px-2 sm:px-3 text-center text-xs sm:text-sm text-gray-600">{{ cliente.ultimaCompra }}</td>
+              <td class="py-3 px-2 sm:px-3 text-center">
+                @if (cliente.status === 'ativo') {
+                  <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-700">Ativo</span>
+                } @else {
+                  <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">Inativo</span>
+                }
+              </td>
+              <td class="py-3 px-2 sm:px-3">
+                <div class="flex items-center justify-center gap-1 sm:gap-2">
+                  <button class="p-1 sm:p-1.5 hover:bg-blue-50 text-blue-600 rounded transition-colors" title="Editar">
+                    <lucide-icon [img]="EditIcon" [size]="14" class="sm:w-4 sm:h-4" />
+                  </button>
+                  <button class="p-1 sm:p-1.5 hover:bg-red-50 text-red-600 rounded transition-colors" title="Excluir">
+                    <lucide-icon [img]="Trash2Icon" [size]="14" class="sm:w-4 sm:h-4" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (clientesFiltrados().length === 0) {
+      <div class="text-center py-12">
+        <lucide-icon [img]="UsersIcon" [size]="48" class="mx-auto text-gray-400 mb-4" />
+        <p class="text-gray-600">Nenhum cliente encontrado</p>
+      </div>
+    }
+  </div>
+</div>

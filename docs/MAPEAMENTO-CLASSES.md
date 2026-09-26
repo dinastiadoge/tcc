@@ -6,7 +6,24 @@ Documento de referência para integrar o front-end com o back-end. Ele lista as 
 >
 > **Sobre o termo "classes":** o projeto não usa `class`. Os equivalentes são as `interface`/`type` do TypeScript (modelo de dados) e as *function components* do React (telas e UI). Este documento cobre os dois e propõe, na seção 4, o modelo que o back deve expor.
 
-Stack: React 18 + Vite 6 + Tailwind 4 + `react-router` 7. Ícones em `lucide-react`. Alias `@` aponta para `src/`.
+Stack original: React 18 + Vite 6 + Tailwind 4 + `react-router` 7. Ícones em `lucide-react`. Alias `@` aponta para `src/`.
+
+> **Atualização (2026-09-26): o front agora é Angular 22.** As seções abaixo descrevem o código React original, que continua em `referencia-react/src/`. Os modelos, regras de negócio e endpoints valem sem mudança. Correspondência de caminhos e conceitos:
+>
+> | React (original) | Angular (atual) |
+> |---|---|
+> | `main.tsx`, `App.tsx` | `src/main.ts`, `app/app.ts`, `app/app.config.ts` |
+> | `routes.ts` | `app/app.routes.ts` |
+> | `context/AuthContext.tsx` (`AuthProvider`, `useAuth`) | `core/auth.service.ts` (`AuthService`, signals) e `core/auth.guard.ts` |
+> | `components/{Layout,Sidebar,MobileHeader}.tsx` | `layout/{layout,sidebar,mobile-header}` |
+> | `components/{Vendas,Estoque,Fiscal}Card.tsx` | `cards/{vendas,estoque,fiscal}-card.ts` |
+> | `pages/Nome.tsx` | `pages/nome.ts` + `nome.html` (kebab-case, ex.: `painel-fiscal`, `nota-entrada`) |
+> | `ModalEditarProduto` (interno de `Estoque.tsx`) | `pages/modal-editar-produto.ts` |
+> | `FileIcon` (interno de `PDV.tsx`) | `<svg>` inline no `pdv.html` |
+> | `services/{auth,clientes,…}.ts` (objetos) | `services/*.service.ts` (classes `@Injectable`; o de auth chama-se `AuthApiService`) |
+> | `useState` / `useEffect` | `signal()` / `computed()` / `effect()` |
+> | `VITE_API_URL`, `VITE_MOCK_AUTH` | `environment.apiUrl`, `environment.mockAuth` (`src/environments/`) |
+> | `components/ui/` (shadcn, sem uso) e bibliotecas sem uso | não portados |
 
 ---
 
@@ -385,7 +402,7 @@ As etapas 1 a 3 do plano de integração **já estão feitas**. As seções 3 a 
 | Serviços | `src/app/services/{auth,clientes,produtos,vendas,notas,inutilizacoes}.ts` | Um objeto por recurso, com os endpoints da seção 4.3. Reexportados em `services/index.ts` |
 | Auth assíncrono | `src/app/context/AuthContext.tsx` | `login()` retorna `Promise<boolean>`; ao carregar a página, se há token, valida em `GET /auth/me` antes de renderizar (`carregando`). Uma resposta 401 limpa o token e desloga. Remove a chave antiga `wc_user` do `localStorage` |
 | Layout / Login | `components/Layout.tsx`, `pages/Login.tsx` | `Layout` aguarda `carregando`. `Login` não tem mais credencial fixa, e-mail pré-preenchido, dica de demo nem atraso simulado |
-| URL da API | `.env.example` | `VITE_API_URL` (padrão `/api` se ausente) |
+| URL da API | `src/environments/environment*.ts` | `apiUrl` (padrão `/api` em produção; `http://localhost:3000` em desenvolvimento). *(No React: `VITE_API_URL` em `.env.example`.)* |
 
 Contratos que o back precisa respeitar para esta base funcionar:
 
@@ -394,7 +411,7 @@ Contratos que o back precisa respeitar para esta base funcionar:
 - Erros respondem JSON com `{ "message": "..." }`.
 - Os campos usam os nomes de `types/index.ts` (por exemplo `estoqueAtual`, não `estoque`).
 
-> Sem o back no ar, o login falha em produção. Em dev (`vite`), `authService` tem um login mock: `admin@autopecas.com` / `admin123` (desligue com `VITE_MOCK_AUTH=false`).
+> Sem o back no ar, o login falha em produção. Em dev (`ng serve`), `AuthApiService` tem um login mock: `admin@autopecas.com` / `admin123` (desligue com `mockAuth: false` em `src/environments/environment.development.ts`).
 
 ## 9. Checklist do que falta
 
