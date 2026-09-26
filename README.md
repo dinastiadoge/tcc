@@ -25,7 +25,7 @@ A URL da API fica em `src/environments/` (`apiUrl`; padrão `/api` em produção
 | `src/app/app.routes.ts` | Rotas da aplicação |
 | `src/environments/` | URL da API e flag do login mock |
 | `referencia-react/` | Código React/Vite original (referência da tradução; não faz parte do build) |
-| `docs/telas/` | Capturas das telas: Angular, React e o diff entre elas |
+| `docs/telas/` | Capturas das telas: Angular e React lado a lado |
 | `guidelines/Guidelines.md` | Regras e preferências para agentes de IA |
 | `_bmad/` | Instalação do BMAD (módulos `core` e `bmm`; versão em `_bmad/_config/manifest.yaml`). Gerenciada pelo instalador, não edite à mão. Para mudar o comportamento de uma skill, use `/bmad-customize` |
 | `_bmad-output/` | Documentos gerados pelo BMAD: planejamento, specs e status das sprints |

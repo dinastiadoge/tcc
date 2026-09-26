@@ -2,7 +2,7 @@
 
 Registro visual da tradução do front de React para Angular (2026-09-26). Cada tela foi capturada nos dois apps, com o mesmo navegador (Chrome headless), em **desktop (1280×900)** e **mobile (390×844)**, e comparada pixel a pixel (`pixelmatch`, limiar 0,1). O React é o código preservado em `referencia-react/`.
 
-Para cada tela há três arquivos: `<tela>-<viewport>-angular.png`, `<tela>-<viewport>-react.png` e `<tela>-<viewport>-diff.png` (pixels diferentes em vermelho/amarelo, resto esmaecido).
+Para cada tela há dois arquivos: `<tela>-<viewport>-angular.png` e `<tela>-<viewport>-react.png`.
 
 **Resultado:** todas as telas ficaram com menos de 0,1% dos pixels diferentes. As diferenças que sobram são só o desenho de alguns ícones (o `lucide-angular` usa uma versão mais nova do lucide que o `lucide-react` original) e serrilhado de texto.
 
@@ -25,122 +25,122 @@ Para cada tela há três arquivos: `<tela>-<viewport>-angular.png`, `<tela>-<vie
 
 ### Login (`/login`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Login Angular](login-desktop-angular.png) | ![Login React](login-desktop-react.png) | ![Login diff](login-desktop-diff.png) |
+| Angular | React |
+|---|---|
+| ![Login Angular](login-desktop-angular.png) | ![Login React](login-desktop-react.png) |
 
 ### Início (`/`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Início Angular](home-desktop-angular.png) | ![Início React](home-desktop-react.png) | ![Início diff](home-desktop-diff.png) |
+| Angular | React |
+|---|---|
+| ![Início Angular](home-desktop-angular.png) | ![Início React](home-desktop-react.png) |
 
 ### PDV / Vendas (`/pdv`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![PDV / Vendas Angular](pdv-desktop-angular.png) | ![PDV / Vendas React](pdv-desktop-react.png) | ![PDV / Vendas diff](pdv-desktop-diff.png) |
+| Angular | React |
+|---|---|
+| ![PDV / Vendas Angular](pdv-desktop-angular.png) | ![PDV / Vendas React](pdv-desktop-react.png) |
 
 ### Clientes (`/clientes`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Clientes Angular](clientes-desktop-angular.png) | ![Clientes React](clientes-desktop-react.png) | ![Clientes diff](clientes-desktop-diff.png) |
+| Angular | React |
+|---|---|
+| ![Clientes Angular](clientes-desktop-angular.png) | ![Clientes React](clientes-desktop-react.png) |
 
 ### Estoque (`/estoque`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Estoque Angular](estoque-desktop-angular.png) | ![Estoque React](estoque-desktop-react.png) | ![Estoque diff](estoque-desktop-diff.png) |
+| Angular | React |
+|---|---|
+| ![Estoque Angular](estoque-desktop-angular.png) | ![Estoque React](estoque-desktop-react.png) |
 
 ### Painel Fiscal (`/fiscal`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Painel Fiscal Angular](fiscal-desktop-angular.png) | ![Painel Fiscal React](fiscal-desktop-react.png) | ![Painel Fiscal diff](fiscal-desktop-diff.png) |
+| Angular | React |
+|---|---|
+| ![Painel Fiscal Angular](fiscal-desktop-angular.png) | ![Painel Fiscal React](fiscal-desktop-react.png) |
 
 ### Cancelamento (`/cancelamento`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Cancelamento Angular](cancelamento-desktop-angular.png) | ![Cancelamento React](cancelamento-desktop-react.png) | ![Cancelamento diff](cancelamento-desktop-diff.png) |
+| Angular | React |
+|---|---|
+| ![Cancelamento Angular](cancelamento-desktop-angular.png) | ![Cancelamento React](cancelamento-desktop-react.png) |
 
 ### Inutilização (`/inutilizacao`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Inutilização Angular](inutilizacao-desktop-angular.png) | ![Inutilização React](inutilizacao-desktop-react.png) | ![Inutilização diff](inutilizacao-desktop-diff.png) |
+| Angular | React |
+|---|---|
+| ![Inutilização Angular](inutilizacao-desktop-angular.png) | ![Inutilização React](inutilizacao-desktop-react.png) |
 
 ### Nota de Devolução (`/devolucao`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Nota de Devolução Angular](devolucao-desktop-angular.png) | ![Nota de Devolução React](devolucao-desktop-react.png) | ![Nota de Devolução diff](devolucao-desktop-diff.png) |
+| Angular | React |
+|---|---|
+| ![Nota de Devolução Angular](devolucao-desktop-angular.png) | ![Nota de Devolução React](devolucao-desktop-react.png) |
 
 ### Nota de Entrada (`/entrada`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Nota de Entrada Angular](entrada-desktop-angular.png) | ![Nota de Entrada React](entrada-desktop-react.png) | ![Nota de Entrada diff](entrada-desktop-diff.png) |
+| Angular | React |
+|---|---|
+| ![Nota de Entrada Angular](entrada-desktop-angular.png) | ![Nota de Entrada React](entrada-desktop-react.png) |
 
 ## Mobile
 
 ### Login (`/login`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Login Angular](login-mobile-angular.png) | ![Login React](login-mobile-react.png) | ![Login diff](login-mobile-diff.png) |
+| Angular | React |
+|---|---|
+| ![Login Angular](login-mobile-angular.png) | ![Login React](login-mobile-react.png) |
 
 ### Início (`/`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Início Angular](home-mobile-angular.png) | ![Início React](home-mobile-react.png) | ![Início diff](home-mobile-diff.png) |
+| Angular | React |
+|---|---|
+| ![Início Angular](home-mobile-angular.png) | ![Início React](home-mobile-react.png) |
 
 ### PDV / Vendas (`/pdv`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![PDV / Vendas Angular](pdv-mobile-angular.png) | ![PDV / Vendas React](pdv-mobile-react.png) | ![PDV / Vendas diff](pdv-mobile-diff.png) |
+| Angular | React |
+|---|---|
+| ![PDV / Vendas Angular](pdv-mobile-angular.png) | ![PDV / Vendas React](pdv-mobile-react.png) |
 
 ### Clientes (`/clientes`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Clientes Angular](clientes-mobile-angular.png) | ![Clientes React](clientes-mobile-react.png) | ![Clientes diff](clientes-mobile-diff.png) |
+| Angular | React |
+|---|---|
+| ![Clientes Angular](clientes-mobile-angular.png) | ![Clientes React](clientes-mobile-react.png) |
 
 ### Estoque (`/estoque`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Estoque Angular](estoque-mobile-angular.png) | ![Estoque React](estoque-mobile-react.png) | ![Estoque diff](estoque-mobile-diff.png) |
+| Angular | React |
+|---|---|
+| ![Estoque Angular](estoque-mobile-angular.png) | ![Estoque React](estoque-mobile-react.png) |
 
 ### Painel Fiscal (`/fiscal`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Painel Fiscal Angular](fiscal-mobile-angular.png) | ![Painel Fiscal React](fiscal-mobile-react.png) | ![Painel Fiscal diff](fiscal-mobile-diff.png) |
+| Angular | React |
+|---|---|
+| ![Painel Fiscal Angular](fiscal-mobile-angular.png) | ![Painel Fiscal React](fiscal-mobile-react.png) |
 
 ### Cancelamento (`/cancelamento`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Cancelamento Angular](cancelamento-mobile-angular.png) | ![Cancelamento React](cancelamento-mobile-react.png) | ![Cancelamento diff](cancelamento-mobile-diff.png) |
+| Angular | React |
+|---|---|
+| ![Cancelamento Angular](cancelamento-mobile-angular.png) | ![Cancelamento React](cancelamento-mobile-react.png) |
 
 ### Inutilização (`/inutilizacao`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Inutilização Angular](inutilizacao-mobile-angular.png) | ![Inutilização React](inutilizacao-mobile-react.png) | ![Inutilização diff](inutilizacao-mobile-diff.png) |
+| Angular | React |
+|---|---|
+| ![Inutilização Angular](inutilizacao-mobile-angular.png) | ![Inutilização React](inutilizacao-mobile-react.png) |
 
 ### Nota de Devolução (`/devolucao`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Nota de Devolução Angular](devolucao-mobile-angular.png) | ![Nota de Devolução React](devolucao-mobile-react.png) | ![Nota de Devolução diff](devolucao-mobile-diff.png) |
+| Angular | React |
+|---|---|
+| ![Nota de Devolução Angular](devolucao-mobile-angular.png) | ![Nota de Devolução React](devolucao-mobile-react.png) |
 
 ### Nota de Entrada (`/entrada`)
 
-| Angular | React | Diff |
-|---|---|---|
-| ![Nota de Entrada Angular](entrada-mobile-angular.png) | ![Nota de Entrada React](entrada-mobile-react.png) | ![Nota de Entrada diff](entrada-mobile-diff.png) |
+| Angular | React |
+|---|---|
+| ![Nota de Entrada Angular](entrada-mobile-angular.png) | ![Nota de Entrada React](entrada-mobile-react.png) |
