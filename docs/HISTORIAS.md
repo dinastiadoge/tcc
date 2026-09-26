@@ -14,7 +14,7 @@ Legenda: `Feito` · `Pendente` · `Bloqueada` (depende de decisão do back, ver 
 | H0.2 | Cliente HTTP e serviços | Feito |
 | H0.3 | Token em `sessionStorage` e auth assíncrono | Feito |
 | H0.4 | Documentação de mapeamento de classes | Feito |
-| H1 | Utilitários de formatação e download | Pendente |
+| H1 | Utilitários de formatação e download | Feito |
 | H2 | Checagem de tipos (`tsconfig` + `tsc`) | Pendente |
 | H3 | Clientes integrado | Pendente |
 | H4 | Estoque integrado | Pendente |
@@ -72,15 +72,14 @@ Ordem sugerida: H1 → H2 → H3 → H4 → H7 → H8 → H10 → H5 → H6 → 
 ### H0.4 — Documentação
 `docs/MAPEAMENTO-CLASSES.md` (modelos, regras de negócio, endpoints, inconsistências) e este arquivo.
 
+### H1 — Utilitários de formatação e download
+`src/app/lib/format.ts`: `formatarDocumento` (11 dígitos → CPF, 14 → CNPJ), `formatarTelefone` (10/11 dígitos), `formatarNcm` (`87083010` → `8708.30.10`), `formatarMoeda` (`R$ 1.250,00`), `formatarData` (`dd/MM/yyyy`), `formatarHora` (`HH:mm`, horário local) e `formatarNumeroNota(n, tamanho = 6)` (zeros à esquerda, ex.: `000123`). Tamanhos fora do esperado voltam só com os dígitos; vazio/`null`/`undefined`/inválido voltam `""`. Data sem hora (`2026-09-24`) não passa por `Date`, para o fuso não voltar um dia.
+`src/app/lib/download.ts`: `baixarArquivo(blob, nomeArquivo)` (`<a download>` temporário; libera a URL do objeto).
+Ainda não há uso nas telas: entra em H3 em diante.
+
 ---
 
 ## Pendentes
-
-### H1 — Utilitários de formatação e download
-**Por quê:** o back envia dado cru; hoje as telas exibem o dado já mascarado.
-**Criar** `src/app/lib/format.ts`: `formatarDocumento(cpfCnpj)` (11 dígitos → CPF, 14 → CNPJ), `formatarTelefone`, `formatarNcm` (`87083010` → `8708.30.10`), `formatarMoeda(n)` (`R$ 1.250,00`), `formatarData(iso)` (`dd/MM/yyyy`), `formatarHora(iso)` (`HH:mm`), `formatarNumeroNota` se necessário.
-**Criar** `src/app/lib/download.ts`: `baixarArquivo(blob, nomeArquivo)` (cria `<a download>` temporário).
-**Aceite:** funções puras; entradas vazias/`null` retornam `""` sem erro.
 
 ### H2 — Checagem de tipos
 **Por quê:** não existe `tsconfig.json`; o `vite build` não checa tipos, então erros de tipo passam despercebidos.
@@ -232,3 +231,4 @@ Ordem sugerida: H1 → H2 → H3 → H4 → H7 → H8 → H10 → H5 → H6 → 
 | 2026-09-24 | Criados `docs/MAPEAMENTO-CLASSES.md`, tipos (`types/`), serviços (`services/`), `.env.example`; `AuthContext` assíncrono com token em `sessionStorage`; `Layout` e `Login` ajustados (H0.1–H0.4). `vite build` passou; TypeScript não verificado (sem `tsconfig`, ver H2). Login não testado contra um back real. |
 | 2026-09-24 | Criado este arquivo de histórias. |
 | 2026-09-24 | Adicionada H13 (guard de rota por grupo de acesso) e perguntas Q6/Q7. Só planejamento: nada implementado, aguardando a definição dos grupos e da matriz de permissões. |
+| 2026-09-26 | H1 feita: `src/app/lib/format.ts` e `download.ts` (funções puras, sem uso nas telas ainda). Verificado com asserções em Node; sem `tsc` (H2). `formatarNumeroNota` usa 6 dígitos por padrão, como nos mocks. |
