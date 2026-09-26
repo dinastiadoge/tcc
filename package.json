@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "cwt": "bash scripts/cwt.sh",
     "dev": "vite"
   },
   "dependencies": {
