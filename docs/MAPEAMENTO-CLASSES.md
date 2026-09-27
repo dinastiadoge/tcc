@@ -234,6 +234,8 @@ Estas são **propostas** derivadas do front; não existem no código. A ideia é
 | `EventoFiscal` | `id`, `notaId`, `tipo` (`CANCELAMENTO`), `justificativa`, `protocolo`, `registradoEm` | fluxo de `Cancelamento` |
 | `Inutilizacao` | `id`, `serie`, `numeroInicial`, `numeroFinal`, `justificativa`, `protocolo`, `registradaEm` | `Inutilizacao` |
 
+> **Lacuna — validação de ACL:** o campo `papel` de `Usuario` acima é só um placeholder; não há, neste documento, modelo de grupos de acesso, mapa `rota → grupos permitidos` nem validação de ACL. O desenho disso está na história **H13 — Guard de rota por grupo de acesso** (`docs/HISTORIAS.md`), hoje **bloqueada** por Q6 (definição dos grupos) e Q7 (matriz de permissões). Mesmo quando H13 for implementada, o guard no front é só UX: **o back precisa validar o grupo em cada endpoint e responder 403** — isso não está modelado aqui. Atualizar esta seção quando Q6/Q7 forem respondidas e H13 avançar.
+
 ### 4.2 Enums
 
 | Enum | Valores |
