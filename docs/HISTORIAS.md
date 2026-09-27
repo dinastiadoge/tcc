@@ -178,7 +178,7 @@ Com a tradução para Angular, `tsconfig.json` tem `strict` e `strictTemplates`,
 **Arquivos:** `components/VendasCard.tsx`, `EstoqueCard.tsx`, `FiscalCard.tsx`. **Depende de:** H1.
 - **EstoqueCard:** `produtosService.listar({ status })` para baixo/crítico (Q5: o back aceita um status por vez; buscar `baixo` e `critico` e juntar, ou pedir filtro múltiplo). `critico: boolean` → `status === "critico"`; `quantidade` → `estoqueAtual`; NCM formatado.
 - **FiscalCard:** `notasService.listar({ de: hoje, ate: hoje })`; `valor` era **string** formatada → `formatarMoeda(valorTotal)`; `hora` de `emitidaEm`; XML/PDF e "Enviar lote para Contador" como em H6.
-- **VendasCard:** buscar cliente por **CPF ou CNPJ** (`clientesService.listar({ documento })`) e "Novo Pedido/Nota Fiscal" navega para `/pdv` (hoje sem ação). **Correção (H14):** o campo hoje é só "Buscar Cliente por CNPJ" (`id="cnpj"`, placeholder `00.000.000/0000-00`); trocar por "Buscar Cliente por CPF ou CNPJ", com máscara automática (11 dígitos → `000.000.000-00`, 14 → `00.000.000/0000-00`) e validação dos dígitos. Ao achar o cliente, levar o `clienteId` ao PDV (parâmetro de rota) para não digitar de novo.
+- **VendasCard:** busca por CPF ou CNPJ com máscara e validação **feita** (2026-09-26/27, Q8, `ClientesStore` mock). "Novo Pedido/Nota Fiscal" **navega para `/pdv`**; se o cliente já foi achado na busca, leva `?clienteId=` na rota e o PDV chega com o documento já preenchido (não precisa digitar de novo). Falta trocar `ClientesStore` por `clientesService.listar({ documento })` quando a H3 ligar o back.
 **Aceite:** os três cards mostram dados reais e os botões agem.
 
 ### H12 — Remoção de mocks e limpeza final

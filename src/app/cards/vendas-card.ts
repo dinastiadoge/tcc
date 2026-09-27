@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { Check, LucideAngularModule, Plus, Search, UserX } from 'lucide-angular';
 import { ClientesStore, NovoCliente } from '../core/clientes.store';
 import { mascararDocumento, tipoDocumentoPorDigitos, validarDocumento } from '../lib/documento';
@@ -59,7 +60,11 @@ import { ModalNovoCliente } from '../pages/modal-novo-cliente';
           }
         </div>
 
-        <button class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm sm:text-base">
+        <button
+          type="button"
+          (click)="irParaPdv()"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm sm:text-base"
+        >
           <lucide-icon [img]="PlusIcon" [size]="18" class="sm:w-5 sm:h-5" />
           <span>Novo Pedido/Nota Fiscal</span>
         </button>
@@ -77,6 +82,7 @@ import { ModalNovoCliente } from '../pages/modal-novo-cliente';
 })
 export class VendasCard {
   private readonly clientes = inject(ClientesStore);
+  private readonly router = inject(Router);
 
   protected readonly SearchIcon = Search;
   protected readonly PlusIcon = Plus;
@@ -108,5 +114,11 @@ export class VendasCard {
   protected cadastrar(dados: NovoCliente) {
     this.clientes.adicionar(dados);
     this.cadastrando.set(false);
+  }
+
+  /** H11: vai para o PDV; se já achou o cliente aqui, leva o `clienteId` para não digitar de novo lá. */
+  protected irParaPdv() {
+    const cliente = this.clienteEncontrado();
+    this.router.navigate(['/pdv'], cliente ? { queryParams: { clienteId: cliente.id } } : undefined);
   }
 }

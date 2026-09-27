@@ -43,6 +43,11 @@ export class ClientesStore {
     return this.clientes().find((c) => soDigitos(c.documento) === digitos);
   }
 
+  /** Usado pelo PDV ao chegar com `?clienteId=` (H11: "Novo Pedido/Nota Fiscal" leva o cliente já achado na Home). */
+  buscarPorId(id: number): Cliente | undefined {
+    return this.clientes().find((c) => c.id === id);
+  }
+
   adicionar(dados: NovoCliente): Cliente {
     const cliente: Cliente = {
       ...dados,

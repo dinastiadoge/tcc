@@ -1,5 +1,6 @@
 import { afterNextRender, Component, computed, Directive, ElementRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import {
   Banknote,
   Building,
@@ -55,6 +56,7 @@ export class Autofocus {
 })
 export class PDV {
   private readonly clientes = inject(ClientesStore);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly CheckIcon = Check;
   protected readonly BuildingIcon = Building;
@@ -146,6 +148,13 @@ export class PDV {
   protected readonly usaCartao = computed(
     () => this.metodoPagamento() === 'credito' || this.metodoPagamento() === 'debito',
   );
+
+  constructor() {
+    // H11: chegando da Home com "Novo Pedido/Nota Fiscal" e o cliente já achado (?clienteId=).
+    const clienteId = Number(this.route.snapshot.queryParamMap.get('clienteId'));
+    const cliente = clienteId ? this.clientes.buscarPorId(clienteId) : undefined;
+    if (cliente) this.documento.set(mascararDocumento(cliente.documento));
+  }
 
   protected aoDigitarDocumento(event: Event) {
     const campo = event.target as HTMLInputElement;
