@@ -7,7 +7,7 @@ import type { Usuario } from '../types';
 import { authGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 
-const usuario: Usuario = { id: 1, nome: 'Administrador', email: 'admin@autopecas.com' };
+const usuario: Usuario = { id: 'u-1', nome: 'Administrador', email: 'admin@autopecas.com' };
 
 async function executarGuard(): Promise<boolean | UrlTree> {
   const resultado = TestBed.runInInjectionContext(() => authGuard({} as never, {} as never));

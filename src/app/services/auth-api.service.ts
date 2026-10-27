@@ -10,7 +10,7 @@ const USAR_MOCK = environment.mockAuth;
 const MOCK_EMAIL = 'admin@autopecas.com';
 const MOCK_SENHA = 'admin123';
 const MOCK_TOKEN = 'mock-token';
-const MOCK_USUARIO: Usuario = { id: 1, nome: 'Administrador', email: MOCK_EMAIL };
+const MOCK_USUARIO: Usuario = { id: 'mock-usuario-1', nome: 'Administrador', email: MOCK_EMAIL };
 
 if (USAR_MOCK) {
   console.warn(

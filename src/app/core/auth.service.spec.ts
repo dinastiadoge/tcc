@@ -4,7 +4,7 @@ import { AuthApiService } from '../services';
 import type { Usuario } from '../types';
 import { AuthService } from './auth.service';
 
-const usuario: Usuario = { id: 1, nome: 'Administrador', email: 'admin@autopecas.com' };
+const usuario: Usuario = { id: 'u-1', nome: 'Administrador', email: 'admin@autopecas.com' };
 
 function criar(api: Partial<Record<keyof AuthApiService, unknown>>): AuthService {
   TestBed.configureTestingModule({

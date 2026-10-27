@@ -4,6 +4,7 @@ import type {
   EntradaInput,
   NotaFiscal,
   NotaFiscalItem,
+  Pagina,
   StatusNota,
 } from '../types';
 import { request, requestBlob } from './http';
@@ -12,23 +13,24 @@ export interface FiltroNotas {
   status?: StatusNota;
   de?: string; // ISO yyyy-MM-dd
   ate?: string; // ISO yyyy-MM-dd
+  limit?: number;
 }
 
 @Injectable({ providedIn: 'root' })
 export class NotasService {
   listar(filtro: FiltroNotas = {}) {
-    return request<NotaFiscal[]>('/notas', { query: { ...filtro } });
+    return request<Pagina<NotaFiscal>>('/notas', { query: { ...filtro } });
   }
 
-  itens(id: number) {
+  itens(id: string) {
     return request<NotaFiscalItem[]>(`/notas/${id}/itens`);
   }
 
-  baixarXml(id: number) {
+  baixarXml(id: string) {
     return requestBlob(`/notas/${id}/xml`);
   }
 
-  baixarPdf(id: number) {
+  baixarPdf(id: string) {
     return requestBlob(`/notas/${id}/pdf`);
   }
 
@@ -41,7 +43,7 @@ export class NotasService {
   }
 
   /** O back valida o prazo de 24 h e a justificativa (mín. 15 caracteres). */
-  cancelar(id: number, justificativa: string) {
+  cancelar(id: string, justificativa: string) {
     return request<NotaFiscal>(`/notas/${id}/cancelamento`, {
       method: 'POST',
       body: { justificativa },

@@ -9,21 +9,28 @@ export type MetodoPagamento = "dinheiro" | "credito" | "debito" | "pix" | "bolet
 export type BandeiraCartao = "mastercard" | "visa" | "elo" | "outros";
 export type DestinoDinheiro = "banco" | "cofre";
 export type StatusEstoque = "ok" | "atencao" | "baixo" | "critico";
-export type StatusNota = "autorizada" | "cancelada" | "processando";
+export type StatusNota = "autorizada" | "cancelada" | "processando" | "rejeitada";
 export type TipoNota = "NFE" | "NFCE" | "DEVOLUCAO" | "ENTRADA";
-export type StatusVenda = "orcamento" | "finalizada";
+export type StatusVenda = "orcamento" | "finalizada" | "cancelada";
+
+/** Envelope de listagem do back (paginação por cursor). `count` é o tamanho da página. */
+export interface Pagina<T> {
+  items: T[];
+  lastKey?: string;
+  count: number;
+}
 
 /** Provisório: nomes de exemplo da H13 até a Q6 confirmar os grupos reais do back. */
 export type GrupoAcesso = "admin" | "vendedor" | "estoquista" | "fiscal";
 
 export interface Usuario {
-  id: number;
+  id: string;
   nome: string;
   email: string;
 }
 
 export interface Cliente {
-  id: number;
+  id: string;
   tipo: TipoPessoa;
   documento: string;
   nome: string;
@@ -37,7 +44,7 @@ export interface Cliente {
 }
 
 export interface Produto {
-  id: number;
+  id: string;
   codigo: string;
   nome: string;
   ncm: string;
@@ -49,7 +56,7 @@ export interface Produto {
 }
 
 export interface Fornecedor {
-  id: number;
+  id: string;
   cnpj: string;
   razaoSocial: string;
   ie: string;
@@ -57,16 +64,16 @@ export interface Fornecedor {
 }
 
 export interface VendaItem {
-  produtoId: number;
+  produtoId: string;
   quantidade: number;
   valorUnitario: number;
 }
 
 export interface Venda {
-  id: number;
+  id: string;
   tipoDocumento: TipoDocumento;
   modalidade: Modalidade;
-  clienteId: number | null;
+  clienteId: string | null;
   metodoPagamento: MetodoPagamento;
   bandeira: BandeiraCartao | null;
   destinoDinheiro: DestinoDinheiro | null;
@@ -78,7 +85,7 @@ export interface Venda {
 }
 
 export interface NotaFiscalItem {
-  produtoId: number | null;
+  produtoId: string | null;
   codigo: string;
   descricao: string;
   ncm: string;
@@ -88,24 +95,24 @@ export interface NotaFiscalItem {
 }
 
 export interface NotaFiscal {
-  id: number;
+  id: string;
   tipo: TipoNota;
   numero: string;
   serie: string;
   chaveAcesso: string | null;
-  clienteId: number | null;
+  clienteId: string | null;
   clienteNome: string | null;
   clienteDocumento: string | null;
-  fornecedorId: number | null;
+  fornecedorId: string | null;
   valorTotal: number;
   emitidaEm: string;
   status: StatusNota;
-  vendaId: number | null;
-  notaReferenciadaId: number | null;
+  vendaId: string | null;
+  notaReferenciadaId: string | null;
 }
 
 export interface Inutilizacao {
-  id: number;
+  id: string;
   serie: string;
   numeroInicial: number;
   numeroFinal: number;
@@ -121,9 +128,9 @@ export type ProdutoInput = Omit<Produto, "id" | "status">;
 export type VendaInput = Omit<Venda, "id" | "subtotal" | "total">;
 
 export interface DevolucaoInput {
-  notaReferenciadaId: number;
+  notaReferenciadaId: string;
   motivo: string;
-  itens: { produtoId: number; quantidade: number; valorUnitario: number }[];
+  itens: { produtoId: string; quantidade: number; valorUnitario: number }[];
 }
 
 export interface EntradaInput {

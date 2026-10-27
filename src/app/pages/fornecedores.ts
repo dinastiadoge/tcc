@@ -8,11 +8,11 @@ import { FornecedorInput, ModalFornecedor } from './modal-fornecedor';
 
 // Mock até a tela ser ligada ao back. Q10: assume cadastro próprio (CRUD) de fornecedor.
 const fornecedoresIniciais: Fornecedor[] = [
-  { id: 1, cnpj: '61586372000136', razaoSocial: 'Distribuidora Brasil Autopeças Ltda', ie: '110042490114', uf: 'SP' },
-  { id: 2, cnpj: '33041260000164', razaoSocial: 'Filtros Nacionais S.A.', ie: '149626224113', uf: 'SP' },
-  { id: 3, cnpj: '07526557000100', razaoSocial: 'Baterias do Sul Indústria Ltda', ie: '0960014240', uf: 'RS' },
-  { id: 4, cnpj: '02558157000162', razaoSocial: 'Freios & Cia Comércio de Peças Ltda', ie: 'ISENTO', uf: 'MG' },
-  { id: 5, cnpj: '17469701000177', razaoSocial: 'Amortecedores Paraná Ltda', ie: '9012345678', uf: 'PR' },
+  { id: 'forn-1', cnpj: '61586372000136', razaoSocial: 'Distribuidora Brasil Autopeças Ltda', ie: '110042490114', uf: 'SP' },
+  { id: 'forn-2', cnpj: '33041260000164', razaoSocial: 'Filtros Nacionais S.A.', ie: '149626224113', uf: 'SP' },
+  { id: 'forn-3', cnpj: '07526557000100', razaoSocial: 'Baterias do Sul Indústria Ltda', ie: '0960014240', uf: 'RS' },
+  { id: 'forn-4', cnpj: '02558157000162', razaoSocial: 'Freios & Cia Comércio de Peças Ltda', ie: 'ISENTO', uf: 'MG' },
+  { id: 'forn-5', cnpj: '17469701000177', razaoSocial: 'Amortecedores Paraná Ltda', ie: '9012345678', uf: 'PR' },
 ];
 
 @Component({
@@ -65,7 +65,7 @@ export class Fornecedores {
         lista.map((f) => (f.id === atual.id ? { ...f, ...dadosLimpos } : f)),
       );
     } else {
-      const id = Math.max(0, ...this.fornecedores().map((f) => f.id)) + 1;
+      const id = crypto.randomUUID();
       this.fornecedores.update((lista) => [...lista, { id, ...dadosLimpos }]);
     }
     this.formulario.set(null);

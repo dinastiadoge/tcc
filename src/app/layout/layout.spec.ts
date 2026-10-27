@@ -23,7 +23,7 @@ describe('Layout', () => {
   });
 
   it('menu mobile aberto trava a rolagem do corpo e restaura ao fechar', async () => {
-    TestBed.inject(AuthService).user.set({ id: 1, nome: 'Administrador', email: 'a@a.com' });
+    TestBed.inject(AuthService).user.set({ id: 'u-1', nome: 'Administrador', email: 'a@a.com' });
     const fixture = TestBed.createComponent(Layout);
     await fixture.whenStable();
 
@@ -39,7 +39,7 @@ describe('Layout', () => {
   });
 
   it('restaura a rolagem do corpo ao sair da tela', async () => {
-    TestBed.inject(AuthService).user.set({ id: 1, nome: 'Administrador', email: 'a@a.com' });
+    TestBed.inject(AuthService).user.set({ id: 'u-1', nome: 'Administrador', email: 'a@a.com' });
     const fixture = TestBed.createComponent(Layout);
     await fixture.whenStable();
     (fixture.nativeElement.querySelector('button[aria-label="Abrir menu"]') as HTMLButtonElement).click();
