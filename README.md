@@ -8,6 +8,16 @@ Execute `npm i` para instalar as dependências.
 
 Execute `npm run dev` para subir o servidor de desenvolvimento.
 
+### Com o back-end local
+
+Todas as telas usam a API de verdade (não há mais dados fixos no código).
+
+1. Suba o back no repositório [TCC-autopecas](https://github.com/JaoNotLitz/TCC-autopecas) com `make up`.
+2. Copie `.env.example` para `.env` (a URL já aponta para o API Gateway do LocalStack).
+3. `npm i` e `npm run dev`, depois abra http://localhost:5173 e entre com `admin@wcautopecas.com.br` / `admin123`.
+
+Para ver uma nota rejeitada e o botão "Reenviar", finalize uma venda com total terminando em **,04** (o simulador da SEFAZ rejeita esse valor).
+
 ## Estrutura do repositório
 
 | Caminho | O que contém |
