@@ -1,8 +1,14 @@
 import { useState } from "react";
-import { PackagePlus, Plus, Trash2, Search, CheckCircle, Clock, Upload } from "lucide-react";
+import { PackagePlus, Plus, Trash2, Search, CheckCircle, Clock, Upload, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { notasService, produtosService } from "../services";
+import type { EntradaInput, NotaFiscal } from "../types";
+import { useApi } from "../lib/useApi";
+import { dinheiro, hojeIso, mensagemErro, somenteDigitos } from "../lib/formato";
 
 interface ItemEntrada {
   id: number;
+  produtoId: number | null;
   codigo: string;
   descricao: string;
   ncm: string;
@@ -12,27 +18,30 @@ interface ItemEntrada {
 }
 
 const cfopOpcoes = ["1102", "1202", "1403", "1411", "2102", "2202"];
+const UFS = "AC AL AM AP BA CE DF ES GO MA MG MS MT PA PB PE PI PR RJ RN RO RR RS SC SE SP TO".split(" ");
+
+const fornecedorVazio = { cnpj: "", razaoSocial: "", ie: "", uf: "SP" };
+const notaVazia = () => ({
+  numero: "",
+  serie: "1",
+  dataEmissao: "",
+  dataEntrada: hojeIso(),
+  chaveAcesso: "",
+  naturezaOperacao: "Compra para comercialização",
+});
 
 export function NotaEntrada() {
-  const [fornecedor, setFornecedor] = useState({
-    cnpj: "",
-    razaoSocial: "",
-    ie: "",
-    uf: "SP",
-  });
-  const [nota, setNota] = useState({
-    numero: "",
-    serie: "1",
-    dataEmissao: "",
-    dataEntrada: new Date().toISOString().split("T")[0],
-    chaveAcesso: "",
-    naturezaOperacao: "Compra para comercialização",
-  });
-  const [itens, setItens] = useState<ItemEntrada[]>([
-    { id: 1, codigo: "PF-001", descricao: "Pastilha de Freio Dianteira", ncm: "8708.30.10", quantidade: 20, valorUnitario: 85.0, cfop: "1102" },
-  ]);
+  const [fornecedor, setFornecedor] = useState(fornecedorVazio);
+  const [nota, setNota] = useState(notaVazia);
+  const [itens, setItens] = useState<ItemEntrada[]>([]);
   const [enviando, setEnviando] = useState(false);
-  const [sucesso, setSucesso] = useState(false);
+  const [importando, setImportando] = useState(false);
+  const [sucesso, setSucesso] = useState<NotaFiscal | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const produtos = useApi(() => produtosService.listar(), []);
+  const catalogo = produtos.dados ?? [];
+  const porCodigo = (codigo: string) => catalogo.find((p) => p.codigo.toLowerCase() === codigo.trim().toLowerCase());
 
   const setForn = (field: string, value: string) =>
     setFornecedor((prev) => ({ ...prev, [field]: value }));
@@ -44,6 +53,7 @@ export function NotaEntrada() {
       ...itens,
       {
         id: Date.now(),
+        produtoId: null,
         codigo: "",
         descricao: "",
         ncm: "",
@@ -54,20 +64,97 @@ export function NotaEntrada() {
     ]);
   };
 
-  const updateItem = (id: number, field: string, value: string | number) => {
+  const updateItem = (id: number, field: string, value: string | number | null) => {
     setItens(itens.map((i) => (i.id === id ? { ...i, [field]: value } : i)));
+  };
+
+  /** Liga o item a um produto do catálogo (o estoque soma nesse produto). */
+  const vincular = (id: number, produtoId: number | null) => {
+    const p = catalogo.find((c) => c.id === produtoId);
+    setItens(itens.map((i) => (i.id === id ? { ...i, produtoId, ncm: i.ncm || (p?.ncm ?? "") } : i)));
   };
 
   const removeItem = (id: number) => setItens(itens.filter((i) => i.id !== id));
 
   const totalNota = itens.reduce((acc, i) => acc + i.quantidade * i.valorUnitario, 0);
 
+  // O item vale para o estoque se tem produtoId ou se o código existe no catálogo.
+  const produtoDoItem = (i: ItemEntrada) => i.produtoId ?? porCodigo(i.codigo)?.id ?? null;
+  const semVinculo = itens.filter((i) => produtoDoItem(i) === null);
+
+  const importarXml = async (arquivo: File | undefined) => {
+    if (!arquivo) return;
+    setImportando(true);
+    setErro(null);
+    try {
+      const previa = await notasService.importarXmlEntrada(arquivo);
+      setFornecedor({
+        cnpj: previa.fornecedor.cnpj,
+        razaoSocial: previa.fornecedor.razaoSocial,
+        ie: previa.fornecedor.ie ?? "",
+        uf: previa.fornecedor.uf || "SP",
+      });
+      setNota({
+        numero: previa.numero,
+        serie: previa.serie,
+        dataEmissao: previa.dataEmissao,
+        dataEntrada: previa.dataEntrada || hojeIso(),
+        chaveAcesso: previa.chaveAcesso,
+        naturezaOperacao: previa.naturezaOperacao,
+      });
+      setItens(
+        previa.itens.map((i, n) => ({
+          id: Date.now() + n,
+          produtoId: i.produtoId,
+          codigo: i.codigo,
+          descricao: i.descricao,
+          ncm: i.ncm,
+          quantidade: i.quantidade,
+          valorUnitario: i.valorUnitario,
+          cfop: i.cfop && cfopOpcoes.includes(i.cfop) ? i.cfop : "1102",
+        })),
+      );
+      toast.success(`XML da nota ${previa.numero} carregado. Confira os dados e registre.`);
+    } catch (e) {
+      setErro(mensagemErro(e));
+    } finally {
+      setImportando(false);
+    }
+  };
+
+  const limpar = () => {
+    setFornecedor(fornecedorVazio);
+    setNota(notaVazia());
+    setItens([]);
+    setErro(null);
+  };
+
   const handleSalvar = async () => {
     setEnviando(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setEnviando(false);
-    setSucesso(true);
-    setTimeout(() => setSucesso(false), 3000);
+    setErro(null);
+    const dados: EntradaInput = {
+      fornecedor: { ...fornecedor, cnpj: somenteDigitos(fornecedor.cnpj) },
+      ...nota,
+      chaveAcesso: somenteDigitos(nota.chaveAcesso),
+      itens: itens.map((i) => ({
+        produtoId: produtoDoItem(i),
+        codigo: i.codigo,
+        descricao: i.descricao,
+        ncm: somenteDigitos(i.ncm),
+        cfop: i.cfop,
+        quantidade: i.quantidade,
+        valorUnitario: i.valorUnitario,
+      })),
+    };
+    try {
+      const registrada = await notasService.registrarEntrada(dados);
+      setSucesso(registrada);
+      produtos.recarregar();
+    } catch (e) {
+      setErro(mensagemErro(e));
+    } finally {
+      setEnviando(false);
+    }
   };
 
   if (sucesso) {
@@ -76,8 +163,17 @@ export function NotaEntrada() {
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <CheckCircle className="text-green-600" size={32} />
         </div>
-        <h3 className="text-lg text-gray-900 mb-1">Nota de entrada registrada!</h3>
+        <h3 className="text-lg text-gray-900 mb-1">Nota de entrada {sucesso.numero} registrada!</h3>
         <p className="text-sm text-gray-500">Os itens foram adicionados ao estoque automaticamente.</p>
+        <button
+          onClick={() => {
+            setSucesso(null);
+            limpar();
+          }}
+          className="mt-6 text-sm text-blue-600 hover:underline"
+        >
+          Registrar outra nota
+        </button>
       </div>
     );
   }
@@ -108,9 +204,18 @@ export function NotaEntrada() {
               </div>
             </div>
             <label className="cursor-pointer flex items-center gap-2 px-4 py-2 text-sm text-blue-600 border border-blue-300 hover:bg-blue-50 rounded-lg transition-colors">
-              <Upload size={14} />
+              {importando ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
               Selecionar XML
-              <input type="file" accept=".xml" className="hidden" />
+              <input
+                type="file"
+                accept=".xml,text/xml"
+                className="hidden"
+                disabled={importando}
+                onChange={(e) => {
+                  importarXml(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
             </label>
           </div>
         </div>
@@ -149,7 +254,7 @@ export function NotaEntrada() {
                 onChange={(e) => setForn("uf", e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {["SP","RJ","MG","RS","PR","SC","BA","GO","PE","CE"].map((uf) => (
+                {UFS.map((uf) => (
                   <option key={uf} value={uf}>{uf}</option>
                 ))}
               </select>
@@ -239,6 +344,7 @@ export function NotaEntrada() {
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-2.5 px-2 text-xs text-gray-500">Código</th>
                   <th className="text-left py-2.5 px-2 text-xs text-gray-500">Descrição</th>
+                  <th className="text-left py-2.5 px-2 text-xs text-gray-500">Produto no estoque</th>
                   <th className="text-left py-2.5 px-2 text-xs text-gray-500">NCM</th>
                   <th className="text-left py-2.5 px-2 text-xs text-gray-500">CFOP</th>
                   <th className="text-center py-2.5 px-2 text-xs text-gray-500">Qtd</th>
@@ -265,6 +371,22 @@ export function NotaEntrada() {
                         onChange={(e) => updateItem(item.id, "descricao", e.target.value)}
                         className="w-full min-w-[140px] px-2 py-1 text-xs border border-gray-300 rounded outline-none focus:ring-1 focus:ring-blue-500"
                       />
+                    </td>
+                    <td className="py-2 px-2">
+                      <select
+                        value={produtoDoItem(item) ?? ""}
+                        onChange={(e) => vincular(item.id, e.target.value ? Number(e.target.value) : null)}
+                        className={`w-40 px-2 py-1 text-xs border rounded outline-none focus:ring-1 focus:ring-blue-500 ${
+                          produtoDoItem(item) === null ? "border-orange-400 bg-orange-50" : "border-gray-300"
+                        }`}
+                      >
+                        <option value="">Vincular produto...</option>
+                        {catalogo.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.codigo} - {p.nome}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="py-2 px-2">
                       <input
@@ -303,7 +425,7 @@ export function NotaEntrada() {
                       />
                     </td>
                     <td className="py-2 px-2 text-right text-xs text-gray-900">
-                      R$ {(item.quantidade * item.valorUnitario).toFixed(2)}
+                      {dinheiro(item.quantidade * item.valorUnitario)}
                     </td>
                     <td className="py-2 px-2 text-center">
                       <button onClick={() => removeItem(item.id)} className="p-1 text-red-500 hover:bg-red-50 rounded">
@@ -319,18 +441,29 @@ export function NotaEntrada() {
           <div className="flex justify-end mt-4 pt-4 border-t border-gray-100">
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">Total da Nota</span>
-              <span className="text-lg font-semibold text-blue-700">R$ {totalNota.toFixed(2)}</span>
+              <span className="text-lg font-semibold text-blue-700">{dinheiro(totalNota)}</span>
             </div>
           </div>
+          {semVinculo.length > 0 && (
+            <p className="mt-3 text-xs text-orange-700">
+              {semVinculo.length === 1 ? "1 item não está" : `${semVinculo.length} itens não estão`} no catálogo: vincule a
+              um produto ou remova o item antes de registrar.
+            </p>
+          )}
         </div>
 
+        {erro && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{erro}</div>}
+
         <div className="flex gap-3">
-          <button className="flex-1 py-2.5 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+          <button
+            onClick={limpar}
+            className="flex-1 py-2.5 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          >
             Cancelar
           </button>
           <button
             onClick={handleSalvar}
-            disabled={enviando || !nota.numero || !fornecedor.cnpj}
+            disabled={enviando || !nota.numero || !fornecedor.cnpj || itens.length === 0 || semVinculo.length > 0}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 rounded-lg transition-colors"
           >
             {enviando ? (

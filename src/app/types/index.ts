@@ -9,7 +9,7 @@ export type MetodoPagamento = "dinheiro" | "credito" | "debito" | "pix" | "bolet
 export type BandeiraCartao = "mastercard" | "visa" | "elo" | "outros";
 export type DestinoDinheiro = "banco" | "cofre";
 export type StatusEstoque = "ok" | "atencao" | "baixo" | "critico";
-export type StatusNota = "autorizada" | "cancelada" | "processando";
+export type StatusNota = "autorizada" | "cancelada" | "processando" | "rejeitada";
 export type TipoNota = "NFE" | "NFCE" | "DEVOLUCAO" | "ENTRADA";
 export type StatusVenda = "orcamento" | "finalizada";
 
@@ -28,6 +28,12 @@ export interface Cliente {
   telefone: string;
   cidade: string;
   uf: string;
+  // Endereço (opcional): vai para o destinatário da NF-e. Sem ele, a nota sai com "NAO INFORMADO".
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
   ativo: boolean;
   totalCompras: number;
   ultimaCompra: string | null;
@@ -99,6 +105,8 @@ export interface NotaFiscal {
   status: StatusNota;
   vendaId: number | null;
   notaReferenciadaId: number | null;
+  /** Só na nota "rejeitada": código e motivo da SEFAZ, para corrigir e reenviar. */
+  motivoRejeicao: string | null;
 }
 
 export interface Inutilizacao {
@@ -144,6 +152,10 @@ export interface InutilizacaoInput {
 export interface LoginResponse {
   token: string;
   usuario: Usuario;
+}
+
+export interface VendaDetalhe extends Venda {
+  notaFiscalId: number | null;
 }
 
 export interface ResumoEstoque {

@@ -14,24 +14,44 @@ import {
   Edit3,
   Check,
   X,
+  Loader2,
+  CheckCircle,
+  AlertTriangle,
+  FileText,
+  Download,
+  RotateCcw,
+  MapPin,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Link } from "react-router";
+import { toast } from "sonner";
+import { clientesService, notasService, produtosService, vendasService } from "../services";
+import type {
+  BandeiraCartao,
+  Cliente,
+  DestinoDinheiro,
+  MetodoPagamento,
+  Modalidade,
+  NotaFiscal,
+  Produto,
+  TipoDocumento,
+} from "../types";
+import { useApi, useIntervalo } from "../lib/useApi";
+import { baixarArquivo, dinheiro, mensagemErro, somenteDigitos } from "../lib/formato";
+import { StatusNotaBadge } from "../components/StatusNotaBadge";
 
 interface ItemCarrinho {
-  id: number;
+  id: number; // produtoId
   codigo: string;
   nome: string;
   quantidade: number;
+  disponivel: number;
   valorUnitario: number;
   editandoPreco: boolean;
   precoTemp: string;
 }
 
-type TipoDocumento = "nfe" | "nfce";
-type Modalidade = "fisica" | "virtual";
-type DestinoMoeda = "banco" | "cofre";
-type MetodoPagamento = "dinheiro" | "credito" | "debito" | "pix" | "boleto";
-type BandeiraCartao = "mastercard" | "visa" | "elo" | "outros";
+type DestinoMoeda = DestinoDinheiro;
 
 const BANDEIRAS: { value: BandeiraCartao; label: string }[] = [
   { value: "mastercard", label: "Mastercard" },
@@ -40,29 +60,17 @@ const BANDEIRAS: { value: BandeiraCartao; label: string }[] = [
   { value: "outros", label: "Outros" },
 ];
 
+/** Venda finalizada e a nota que o back está emitindo para ela. */
+interface Emissao {
+  vendaId: number;
+  total: number;
+  nota: NotaFiscal | null;
+}
+
 export function PDV() {
   const [tipoDocumento, setTipoDocumento] = useState<TipoDocumento>("nfe");
   const [consumidorIdentificado, setConsumidorIdentificado] = useState(true);
-  const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([
-    {
-      id: 1,
-      codigo: "PF-001",
-      nome: "Pastilha de Freio Dianteira",
-      quantidade: 2,
-      valorUnitario: 125.0,
-      editandoPreco: false,
-      precoTemp: "125.00",
-    },
-    {
-      id: 2,
-      codigo: "FO-023",
-      nome: "Filtro de Óleo Motor",
-      quantidade: 1,
-      valorUnitario: 45.9,
-      editandoPreco: false,
-      precoTemp: "45.90",
-    },
-  ]);
+  const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
 
   const [modalidade, setModalidade] = useState<Modalidade>("fisica");
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamento>("dinheiro");
@@ -70,11 +78,75 @@ export function PDV() {
   const [destinoMoeda, setDestinoMoeda] = useState<DestinoMoeda>("banco");
   const [desconto, setDesconto] = useState(0);
 
+  // Cliente
+  const [docCliente, setDocCliente] = useState("");
+  const [cliente, setCliente] = useState<Cliente | null>(null);
+  const [buscandoCliente, setBuscandoCliente] = useState(false);
+  const [clienteNaoEncontrado, setClienteNaoEncontrado] = useState(false);
+
+  // Produtos
+  const produtos = useApi(() => produtosService.listar(), []);
+  const [buscaProduto, setBuscaProduto] = useState("");
+  const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+
+  const [enviando, setEnviando] = useState<"finalizada" | "orcamento" | null>(null);
+  const [erroVenda, setErroVenda] = useState<string | null>(null);
+  const [emissao, setEmissao] = useState<Emissao | null>(null);
+
   const subtotal = carrinho.reduce(
     (acc, item) => acc + item.quantidade * item.valorUnitario,
     0,
   );
   const total = subtotal - desconto;
+
+  const sugestoes = useMemo(() => {
+    const termo = buscaProduto.trim().toLowerCase();
+    if (!termo) return [];
+    return (produtos.dados ?? [])
+      .filter((p) => p.codigo.toLowerCase().includes(termo) || p.nome.toLowerCase().includes(termo))
+      .slice(0, 8);
+  }, [buscaProduto, produtos.dados]);
+
+  const adicionarProduto = (p: Produto) => {
+    setCarrinho((atual) => {
+      const existente = atual.find((i) => i.id === p.id);
+      if (existente) {
+        return atual.map((i) => (i.id === p.id ? { ...i, quantidade: i.quantidade + 1 } : i));
+      }
+      return [
+        ...atual,
+        {
+          id: p.id,
+          codigo: p.codigo,
+          nome: p.nome,
+          quantidade: 1,
+          disponivel: p.estoqueAtual,
+          valorUnitario: p.precoVenda,
+          editandoPreco: false,
+          precoTemp: p.precoVenda.toFixed(2),
+        },
+      ];
+    });
+    setBuscaProduto("");
+    setMostrarSugestoes(false);
+  };
+
+  const buscarCliente = async () => {
+    const doc = somenteDigitos(docCliente);
+    setCliente(null);
+    setClienteNaoEncontrado(false);
+    if (doc.length !== 11 && doc.length !== 14) return;
+    setBuscandoCliente(true);
+    try {
+      const lista = await clientesService.listar({ documento: doc });
+      if (lista.length > 0) setCliente(lista[0]);
+      else setClienteNaoEncontrado(true);
+    } catch (e) {
+      toast.error(mensagemErro(e));
+    } finally {
+      setBuscandoCliente(false);
+    }
+  };
 
   const removerItem = (id: number) => {
     setCarrinho(carrinho.filter((item) => item.id !== id));
@@ -120,6 +192,95 @@ export function PDV() {
   };
 
   const usaCartao = metodoPagamento === "credito" || metodoPagamento === "debito";
+  const exigeCliente = tipoDocumento === "nfe";
+  const clienteId = consumidorIdentificado ? cliente?.id ?? null : null;
+  const podeEnviar = carrinho.length > 0 && total >= 0 && (!exigeCliente || clienteId !== null);
+  const semEndereco = cliente !== null && !cliente.logradouro;
+
+  const enviar = async (status: "finalizada" | "orcamento") => {
+    setEnviando(status);
+    setErroVenda(null);
+    try {
+      const venda = await vendasService.criar({
+        tipoDocumento,
+        modalidade,
+        clienteId,
+        metodoPagamento,
+        bandeira: usaCartao ? bandeira : null,
+        destinoDinheiro: metodoPagamento === "dinheiro" ? destinoMoeda : null,
+        desconto,
+        status,
+        itens: carrinho.map((i) => ({ produtoId: i.id, quantidade: i.quantidade, valorUnitario: i.valorUnitario })),
+      });
+      if (status === "orcamento") {
+        toast.success(`Orçamento ${venda.id} salvo.`);
+        return;
+      }
+      setEmissao({ vendaId: venda.id, total: venda.total, nota: null });
+      produtos.recarregar();
+    } catch (e) {
+      setErroVenda(mensagemErro(e));
+    } finally {
+      setEnviando(null);
+    }
+  };
+
+  // A nota é emitida de forma assíncrona: consulta até sair de "processando".
+  const consultarNota = async () => {
+    if (!emissao) return;
+    try {
+      const notas = await notasService.listar({ vendaId: emissao.vendaId });
+      if (notas.length > 0) setEmissao((e) => (e ? { ...e, nota: notas[0] } : e));
+    } catch {
+      // tenta de novo no próximo ciclo
+    }
+  };
+  useIntervalo(consultarNota, 1500, emissao !== null && (emissao.nota === null || emissao.nota.status === "processando"));
+
+  const novaVenda = () => {
+    setEmissao(null);
+    setCarrinho([]);
+    setDesconto(0);
+    setDocCliente("");
+    setCliente(null);
+    setClienteNaoEncontrado(false);
+    setErroVenda(null);
+  };
+
+  const baixarNota = async (nota: NotaFiscal, formato: "xml" | "pdf") => {
+    try {
+      const blob = formato === "xml" ? await notasService.baixarXml(nota.id) : await notasService.baixarPdf(nota.id);
+      if (formato === "pdf" && nota.tipo === "NFCE") {
+        window.open(URL.createObjectURL(blob), "_blank"); // cupom: abre para imprimir
+      } else {
+        baixarArquivo(blob, `${nota.tipo}-${nota.numero}.${formato}`);
+      }
+    } catch (e) {
+      toast.error(mensagemErro(e));
+    }
+  };
+
+  const reenviarNota = async (nota: NotaFiscal) => {
+    try {
+      const atualizada = await notasService.reenviar(nota.id);
+      setEmissao((e) => (e ? { ...e, nota: atualizada } : e));
+      toast.success("Nota reenviada para a SEFAZ.");
+    } catch (e) {
+      toast.error(mensagemErro(e));
+    }
+  };
+
+  if (emissao) {
+    return (
+      <ResultadoEmissao
+        emissao={emissao}
+        clienteId={clienteId}
+        onBaixar={baixarNota}
+        onReenviar={reenviarNota}
+        onNovaVenda={novaVenda}
+      />
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8">
@@ -240,10 +401,22 @@ export function PDV() {
                   <div className="relative">
                     <input
                       type="text"
+                      value={docCliente}
+                      onChange={(e) => {
+                        setDocCliente(e.target.value);
+                        setCliente(null);
+                        setClienteNaoEncontrado(false);
+                      }}
+                      onBlur={buscarCliente}
+                      onKeyDown={(e) => e.key === "Enter" && buscarCliente()}
                       placeholder={tipoDocumento === "nfe" ? "00.000.000/0000-00" : "000.000.000-00"}
                       className="w-full pl-10 pr-4 py-2 sm:py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                     />
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    {buscandoCliente ? (
+                      <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" size={16} />
+                    ) : (
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    )}
                   </div>
                 </div>
                 <div>
@@ -252,10 +425,41 @@ export function PDV() {
                   </label>
                   <input
                     type="text"
-                    placeholder="Digite o nome"
-                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    readOnly
+                    value={cliente?.nome ?? ""}
+                    placeholder="Preenchido pelo documento"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm border border-gray-300 rounded-lg bg-gray-50 outline-none"
                   />
                 </div>
+                {cliente && (
+                  <div className="md:col-span-2 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="inline-flex items-center gap-1 text-gray-600">
+                      <MapPin size={12} />
+                      {cliente.logradouro
+                        ? `${cliente.logradouro}, ${cliente.numero} - ${cliente.bairro} - ${cliente.cidade}/${cliente.uf}`
+                        : `${cliente.cidade}/${cliente.uf}`}
+                    </span>
+                    {semEndereco ? (
+                      <Link
+                        to={`/clientes?editar=${cliente.id}&foco=endereco`}
+                        className="px-2 py-0.5 rounded bg-orange-100 text-orange-700 hover:bg-orange-200"
+                      >
+                        Endereço incompleto · completar cadastro
+                      </Link>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded bg-green-100 text-green-700">Endereço completo</span>
+                    )}
+                    {!cliente.ativo && <span className="px-2 py-0.5 rounded bg-red-100 text-red-700">Cliente inativo</span>}
+                  </div>
+                )}
+                {clienteNaoEncontrado && (
+                  <div className="md:col-span-2 text-xs text-orange-700">
+                    Nenhum cliente com esse documento.{" "}
+                    <Link to="/clientes" className="underline">
+                      Cadastrar cliente
+                    </Link>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -264,7 +468,11 @@ export function PDV() {
           <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h2 className="text-base sm:text-lg text-gray-900">Produtos</h2>
-              <button className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm">
+              <button
+                onClick={() => sugestoes[0] && adicionarProduto(sugestoes[0])}
+                disabled={sugestoes.length === 0}
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg transition-colors text-sm"
+              >
                 <Plus size={16} />
                 <span>Adicionar Produto</span>
               </button>
@@ -274,10 +482,40 @@ export function PDV() {
               <div className="relative">
                 <input
                   type="text"
+                  value={buscaProduto}
+                  onChange={(e) => {
+                    setBuscaProduto(e.target.value);
+                    setMostrarSugestoes(true);
+                  }}
+                  onFocus={() => setMostrarSugestoes(true)}
+                  onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
+                  onKeyDown={(e) => e.key === "Enter" && sugestoes[0] && adicionarProduto(sugestoes[0])}
                   placeholder="Buscar produto por código ou nome..."
                   className="w-full pl-10 pr-4 py-2 sm:py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                {mostrarSugestoes && sugestoes.length > 0 && (
+                  <ul className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
+                    {sugestoes.map((p) => (
+                      <li key={p.id}>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => adicionarProduto(p)}
+                          className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-blue-50"
+                        >
+                          <span>
+                            <span className="text-xs text-gray-500 mr-2">{p.codigo}</span>
+                            {p.nome}
+                          </span>
+                          <span className="text-xs text-gray-500 whitespace-nowrap">
+                            {dinheiro(p.precoVenda)} · {p.estoqueAtual} em estoque
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
 
@@ -297,7 +535,12 @@ export function PDV() {
                   {carrinho.map((item) => (
                     <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                       <td className="py-3 px-2 sm:px-3 text-xs text-gray-500">{item.codigo}</td>
-                      <td className="py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-900">{item.nome}</td>
+                      <td className="py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-900">
+                        {item.nome}
+                        {item.quantidade > item.disponivel && (
+                          <span className="block text-xs text-red-600">Só {item.disponivel} em estoque</span>
+                        )}
+                      </td>
                       <td className="py-3 px-2 sm:px-3 text-center">
                         <input
                           type="number"
@@ -350,7 +593,7 @@ export function PDV() {
                             title="Clique para editar o preço"
                           >
                             <span className="text-xs sm:text-sm text-gray-900">
-                              R$ {item.valorUnitario.toFixed(2)}
+                              {dinheiro(item.valorUnitario)}
                             </span>
                             <Edit3
                               size={12}
@@ -360,7 +603,7 @@ export function PDV() {
                         )}
                       </td>
                       <td className="py-3 px-2 sm:px-3 text-right text-xs sm:text-sm text-gray-900">
-                        R$ {(item.quantidade * item.valorUnitario).toFixed(2)}
+                        {dinheiro(item.quantidade * item.valorUnitario)}
                       </td>
                       <td className="py-3 px-2 sm:px-3 text-center">
                         <button
@@ -397,7 +640,7 @@ export function PDV() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Subtotal</span>
-                <span>R$ {subtotal.toFixed(2)}</span>
+                <span>{dinheiro(subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm text-gray-600 items-center">
                 <span>Desconto (R$)</span>
@@ -412,7 +655,7 @@ export function PDV() {
               <div className="h-px bg-gray-200" />
               <div className="flex justify-between text-lg text-gray-900 font-semibold">
                 <span>Total</span>
-                <span>R$ {total.toFixed(2)}</span>
+                <span>{dinheiro(total)}</span>
               </div>
             </div>
 
@@ -498,19 +741,33 @@ export function PDV() {
 
             {/* Ações */}
             <div className="space-y-2 pt-1">
-              <button className="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm font-medium">
-                <DollarSign size={17} />
+              {erroVenda && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{erroVenda}</div>
+              )}
+              {exigeCliente && clienteId === null && carrinho.length > 0 && (
+                <p className="text-xs text-orange-700">NF-e exige cliente identificado: informe o CPF/CNPJ.</p>
+              )}
+              <button
+                onClick={() => enviar("finalizada")}
+                disabled={!podeEnviar || enviando !== null}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm font-medium"
+              >
+                {enviando === "finalizada" ? <Loader2 size={17} className="animate-spin" /> : <DollarSign size={17} />}
                 Finalizar Venda
               </button>
 
               {tipoDocumento === "nfce" && (
-                <button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm">
-                  <Printer size={16} />
-                  Imprimir Cupom (NTH)
-                </button>
+                <p className="text-xs text-gray-500 text-center flex items-center justify-center gap-1">
+                  <Printer size={12} />
+                  O cupom fica disponível para impressão após a autorização.
+                </p>
               )}
 
-              <button className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm">
+              <button
+                onClick={() => enviar("orcamento")}
+                disabled={carrinho.length === 0 || enviando !== null}
+                className="w-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm"
+              >
                 Salvar Orçamento
               </button>
             </div>
@@ -530,5 +787,101 @@ function FileIcon({ size }: { size: number }) {
       <line x1="16" y1="17" x2="8" y2="17" />
       <polyline points="10 9 9 9 8 9" />
     </svg>
+  );
+}
+
+function ResultadoEmissao({
+  emissao,
+  clienteId,
+  onBaixar,
+  onReenviar,
+  onNovaVenda,
+}: {
+  emissao: Emissao;
+  clienteId: number | null;
+  onBaixar: (n: NotaFiscal, formato: "xml" | "pdf") => void;
+  onReenviar: (n: NotaFiscal) => void;
+  onNovaVenda: () => void;
+}) {
+  const nota = emissao.nota;
+  const status = nota?.status ?? "processando";
+  const nome = nota?.tipo === "NFCE" ? "NFC-e" : "NF-e";
+
+  return (
+    <div className="max-w-2xl mx-auto p-4 sm:p-6 md:p-8">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8 text-center">
+        {status === "processando" && (
+          <>
+            <Loader2 className="mx-auto mb-4 text-blue-600 animate-spin" size={40} />
+            <h2 className="text-lg text-gray-900 mb-1">Venda {emissao.vendaId} finalizada</h2>
+            <p className="text-sm text-gray-500">Emitindo o documento fiscal e aguardando a SEFAZ...</p>
+          </>
+        )}
+        {status === "autorizada" && nota && (
+          <>
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="text-green-600" size={32} />
+            </div>
+            <h2 className="text-lg text-gray-900 mb-1">
+              {nome} {nota.numero}/{nota.serie} autorizada
+            </h2>
+            <p className="text-sm text-gray-500 mb-1">Venda {emissao.vendaId} · {dinheiro(emissao.total)}</p>
+            {nota.chaveAcesso && <p className="text-xs text-gray-400 font-mono break-all mb-5">{nota.chaveAcesso}</p>}
+            <div className="flex flex-wrap justify-center gap-2">
+              <button
+                onClick={() => onBaixar(nota, "pdf")}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-purple-600 hover:bg-purple-700 rounded-lg"
+              >
+                {nota.tipo === "NFCE" ? <Printer size={15} /> : <FileText size={15} />}
+                {nota.tipo === "NFCE" ? "Imprimir Cupom" : "Baixar DANFE"}
+              </button>
+              <button
+                onClick={() => onBaixar(nota, "xml")}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
+              >
+                <Download size={15} />
+                Baixar XML
+              </button>
+            </div>
+          </>
+        )}
+        {status === "rejeitada" && nota && (
+          <>
+            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="text-orange-600" size={32} />
+            </div>
+            <h2 className="text-lg text-gray-900 mb-1">
+              {nome} {nota.numero} rejeitada pela SEFAZ
+            </h2>
+            <p className="text-sm text-orange-700 mb-5">{nota.motivoRejeicao ?? "Sem motivo informado"}</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {clienteId !== null && (
+                <Link
+                  to={`/clientes?editar=${clienteId}&foco=endereco`}
+                  className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
+                >
+                  Corrigir cadastro do cliente
+                </Link>
+              )}
+              <button
+                onClick={() => onReenviar(nota)}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-orange-600 hover:bg-orange-700 rounded-lg"
+              >
+                <RotateCcw size={15} />
+                Reenviar
+              </button>
+            </div>
+          </>
+        )}
+        {nota && status !== "processando" && (
+          <div className="mt-4">
+            <StatusNotaBadge status={nota.status} motivo={nota.motivoRejeicao} />
+          </div>
+        )}
+        <button onClick={onNovaVenda} className="mt-6 text-sm text-blue-600 hover:underline">
+          Nova venda
+        </button>
+      </div>
+    </div>
   );
 }

@@ -1,50 +1,50 @@
 import { useState } from "react";
 import { Search, XCircle, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { notasService } from "../services";
+import type { NotaFiscal } from "../types";
+import { useApi } from "../lib/useApi";
+import { data, dinheiro, mensagemErro } from "../lib/formato";
 
-interface NotaParaCancelar {
-  id: number;
-  numero: string;
-  serie: string;
-  cliente: string;
-  valor: number;
-  dataEmissao: string;
-  chaveAcesso: string;
-  status: "autorizada" | "cancelada";
-}
-
-const notas: NotaParaCancelar[] = [
-  { id: 1, numero: "000126", serie: "1", cliente: "Transportadora Rápida Ltda", valor: 3450.0, dataEmissao: "23/04/2026", chaveAcesso: "35260412345678000195550010001260001234567890", status: "autorizada" },
-  { id: 2, numero: "000125", serie: "1", cliente: "Posto Central", valor: 780.0, dataEmissao: "23/04/2026", chaveAcesso: "35260498765432000111550010001250009876543210", status: "autorizada" },
-  { id: 3, numero: "000124", serie: "1", cliente: "Retífica Souza Ltda", valor: 2890.0, dataEmissao: "23/04/2026", chaveAcesso: "35260445678901000123550010001240004567890120", status: "autorizada" },
-  { id: 4, numero: "000121", serie: "1", cliente: "Caminhões e CIA", valor: 4120.0, dataEmissao: "22/04/2026", chaveAcesso: "35260456789012000189550010001210005678901230", status: "cancelada" },
-];
+const VINTE_QUATRO_HORAS = 24 * 60 * 60 * 1000;
 
 export function Cancelamento() {
   const [busca, setBusca] = useState("");
-  const [notaSelecionada, setNotaSelecionada] = useState<NotaParaCancelar | null>(null);
+  const [notaSelecionada, setNotaSelecionada] = useState<NotaFiscal | null>(null);
   const [justificativa, setJustificativa] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [sucesso, setSucesso] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
-  const notasFiltradas = notas.filter(
+  const { dados, carregando, recarregar } = useApi(() => notasService.listar({ status: "autorizada" }), []);
+
+  // Só NF-e/NFC-e da loja, autorizadas nas últimas 24 h (o back confere o prazo de novo).
+  const notasFiltradas = (dados ?? []).filter(
     (n) =>
-      n.status === "autorizada" &&
+      (n.tipo === "NFE" || n.tipo === "NFCE") &&
+      Date.now() - new Date(n.emitidaEm).getTime() < VINTE_QUATRO_HORAS &&
       (busca === "" ||
         n.numero.includes(busca) ||
-        n.cliente.toLowerCase().includes(busca.toLowerCase())),
+        (n.clienteNome ?? "consumidor final").toLowerCase().includes(busca.toLowerCase())),
   );
 
   const handleCancelar = async () => {
-    if (justificativa.trim().length < 15) return;
+    if (!notaSelecionada || justificativa.trim().length < 15) return;
     setEnviando(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setEnviando(false);
-    setSucesso(true);
-    setTimeout(() => {
-      setSucesso(false);
-      setNotaSelecionada(null);
-      setJustificativa("");
-    }, 2500);
+    setErro(null);
+    try {
+      await notasService.cancelar(notaSelecionada.id, justificativa.trim());
+      setSucesso(true);
+      setTimeout(() => {
+        setSucesso(false);
+        setNotaSelecionada(null);
+        setJustificativa("");
+        recarregar();
+      }, 2500);
+    } catch (e) {
+      setErro(mensagemErro(e));
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
@@ -96,19 +96,19 @@ export function Cancelamento() {
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-0.5">Cliente</p>
-              <p className="text-sm text-gray-900 font-medium">{notaSelecionada.cliente}</p>
+              <p className="text-sm text-gray-900 font-medium">{notaSelecionada.clienteNome ?? "Consumidor final"}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-0.5">Valor</p>
-              <p className="text-sm text-gray-900 font-medium">R$ {notaSelecionada.valor.toFixed(2)}</p>
+              <p className="text-sm text-gray-900 font-medium">{dinheiro(notaSelecionada.valorTotal)}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-0.5">Data de Emissão</p>
-              <p className="text-sm text-gray-900 font-medium">{notaSelecionada.dataEmissao}</p>
+              <p className="text-sm text-gray-900 font-medium">{data(notaSelecionada.emitidaEm)}</p>
             </div>
             <div className="sm:col-span-2">
               <p className="text-xs text-gray-500 mb-0.5">Chave de Acesso</p>
-              <p className="text-xs text-gray-700 font-mono break-all">{notaSelecionada.chaveAcesso}</p>
+              <p className="text-xs text-gray-700 font-mono break-all">{notaSelecionada.chaveAcesso ?? "-"}</p>
             </div>
           </div>
 
@@ -128,6 +128,8 @@ export function Cancelamento() {
               {justificativa.length} / 15 caracteres mínimos
             </p>
           </div>
+
+          {erro && <p className="mb-4 text-sm text-red-600">{erro}</p>}
 
           <div className="flex gap-3">
             <button
@@ -178,14 +180,17 @@ export function Cancelamento() {
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-1">
-                    <span className="text-sm font-medium text-gray-900">NF-e {nota.numero}/{nota.serie}</span>
+                    <span className="text-sm font-medium text-gray-900">{nota.tipo === "NFCE" ? "NFC-e" : "NF-e"} {nota.numero}/{nota.serie}</span>
                     <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">Autorizada</span>
                   </div>
-                  <p className="text-sm text-gray-600">{nota.cliente}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{nota.dataEmissao} · R$ {nota.valor.toFixed(2)}</p>
+                  <p className="text-sm text-gray-600">{nota.clienteNome ?? "Consumidor final"}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{data(nota.emitidaEm)} · {dinheiro(nota.valorTotal)}</p>
                 </div>
                 <button
-                  onClick={() => setNotaSelecionada(nota)}
+                  onClick={() => {
+                    setErro(null);
+                    setNotaSelecionada(nota);
+                  }}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 border border-red-200 hover:bg-red-50 rounded-lg transition-colors ml-4"
                 >
                   <XCircle size={13} />
@@ -195,7 +200,7 @@ export function Cancelamento() {
             ))}
             {notasFiltradas.length === 0 && (
               <div className="py-10 text-center text-sm text-gray-400">
-                Nenhuma nota autorizada encontrada
+                {carregando ? "Carregando..." : "Nenhuma nota autorizada nas últimas 24 horas"}
               </div>
             )}
           </div>

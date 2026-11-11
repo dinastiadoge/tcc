@@ -1,8 +1,13 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { Search, RotateCcw, Plus, Trash2, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { notasService } from "../services";
+import type { NotaFiscal } from "../types";
+import { useApi } from "../lib/useApi";
+import { data, dinheiro, documento, mensagemErro } from "../lib/formato";
 
 interface ItemDevolucao {
-  id: number;
+  id: number; // produtoId
   codigo: string;
   nome: string;
   qtdOriginal: number;
@@ -10,35 +15,47 @@ interface ItemDevolucao {
   valorUnitario: number;
 }
 
-const notasReferencia = [
-  { numero: "000126", serie: "1", cliente: "Transportadora Rápida Ltda", cnpj: "12.345.678/0001-90", valor: 3450.0, data: "23/04/2026" },
-  { numero: "000125", serie: "1", cliente: "Posto Central", cnpj: "98.765.432/0001-11", valor: 780.0, data: "23/04/2026" },
-  { numero: "000124", serie: "1", cliente: "Retífica Souza Ltda", cnpj: "45.678.901/0001-23", valor: 2890.0, data: "23/04/2026" },
-];
-
-const itensMock: ItemDevolucao[] = [
-  { id: 1, codigo: "PF-001", nome: "Pastilha de Freio Dianteira", qtdOriginal: 4, qtdDevolver: 2, valorUnitario: 125.0 },
-  { id: 2, codigo: "FO-023", nome: "Filtro de Óleo Motor", qtdOriginal: 2, qtdDevolver: 1, valorUnitario: 45.9 },
-];
-
 export function NotaDevolucao() {
   const [busca, setBusca] = useState("");
-  const [notaRef, setNotaRef] = useState<typeof notasReferencia[0] | null>(null);
+  const [notaRef, setNotaRef] = useState<NotaFiscal | null>(null);
+  const [itensOriginais, setItensOriginais] = useState<ItemDevolucao[]>([]);
   const [itens, setItens] = useState<ItemDevolucao[]>([]);
   const [motivo, setMotivo] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const [sucesso, setSucesso] = useState(false);
+  const [sucesso, setSucesso] = useState<NotaFiscal | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Devolução referencia uma NF-e/NFC-e de venda já autorizada.
+  const { dados, carregando } = useApi(() => notasService.listar({ status: "autorizada" }), []);
+  const notasReferencia = (dados ?? []).filter((n) => n.tipo === "NFE" || n.tipo === "NFCE");
 
   const notasFiltradas = notasReferencia.filter(
     (n) =>
       busca === "" ||
       n.numero.includes(busca) ||
-      n.cliente.toLowerCase().includes(busca.toLowerCase()),
+      (n.clienteNome ?? "consumidor final").toLowerCase().includes(busca.toLowerCase()),
   );
 
-  const selecionarNota = (nota: typeof notasReferencia[0]) => {
-    setNotaRef(nota);
-    setItens(itensMock.map((i) => ({ ...i })));
+  const selecionarNota = async (nota: NotaFiscal) => {
+    setErro(null);
+    try {
+      const linhas = await notasService.itens(nota.id);
+      const lista = linhas
+        .filter((l) => l.produtoId !== null)
+        .map((l) => ({
+          id: l.produtoId as number,
+          codigo: l.codigo,
+          nome: l.descricao,
+          qtdOriginal: l.quantidade,
+          qtdDevolver: l.quantidade,
+          valorUnitario: l.valorUnitario,
+        }));
+      setNotaRef(nota);
+      setItensOriginais(lista);
+      setItens(lista.map((i) => ({ ...i })));
+    } catch (e) {
+      setErro(mensagemErro(e));
+    }
   };
 
   const atualizarQtd = (id: number, qtd: number) => {
@@ -54,17 +71,31 @@ export function NotaDevolucao() {
   const totalDevolucao = itens.reduce((acc, i) => acc + i.qtdDevolver * i.valorUnitario, 0);
 
   const handleEmitir = async () => {
+    if (!notaRef) return;
     setEnviando(true);
-    await new Promise((r) => setTimeout(r, 1400));
-    setEnviando(false);
-    setSucesso(true);
-    setTimeout(() => {
-      setSucesso(false);
-      setNotaRef(null);
-      setItens([]);
-      setMotivo("");
-      setBusca("");
-    }, 2500);
+    setErro(null);
+    try {
+      const nota = await notasService.emitirDevolucao({
+        notaReferenciadaId: notaRef.id,
+        motivo: motivo.trim(),
+        itens: itens
+          .filter((i) => i.qtdDevolver > 0)
+          .map((i) => ({ produtoId: i.id, quantidade: i.qtdDevolver, valorUnitario: i.valorUnitario })),
+      });
+      setSucesso(nota);
+    } catch (e) {
+      setErro(mensagemErro(e));
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const recomecar = () => {
+    setSucesso(null);
+    setNotaRef(null);
+    setItens([]);
+    setMotivo("");
+    setBusca("");
   };
 
   if (sucesso) {
@@ -73,8 +104,17 @@ export function NotaDevolucao() {
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
           <CheckCircle className="text-green-600" size={32} />
         </div>
-        <h3 className="text-lg text-gray-900 mb-1">Nota de devolução emitida!</h3>
-        <p className="text-sm text-gray-500">A NF-e de devolução foi autorizada pela SEFAZ.</p>
+        <h3 className="text-lg text-gray-900 mb-1">Nota de devolução {sucesso.numero} emitida!</h3>
+        <p className="text-sm text-gray-500">
+          A NF-e de devolução foi enviada à SEFAZ. Acompanhe a autorização no{" "}
+          <Link to="/fiscal" className="text-blue-600 hover:underline">
+            Painel Fiscal
+          </Link>
+          .
+        </p>
+        <button onClick={recomecar} className="mt-6 text-sm text-blue-600 hover:underline">
+          Nova devolução
+        </button>
       </div>
     );
   }
@@ -106,20 +146,29 @@ export function NotaDevolucao() {
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           </div>
+          {erro && <p className="mb-3 text-sm text-red-600">{erro}</p>}
           <div className="space-y-2">
+            {notasFiltradas.length === 0 && (
+              <p className="py-8 text-center text-sm text-gray-400">
+                {carregando ? "Carregando..." : "Nenhuma nota autorizada encontrada"}
+              </p>
+            )}
             {notasFiltradas.map((nota) => (
               <div
-                key={nota.numero}
+                key={nota.id}
                 className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-colors cursor-pointer"
                 onClick={() => selecionarNota(nota)}
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-gray-900">NF-e {nota.numero}/{nota.serie}</span>
+                    <span className="text-sm font-medium text-gray-900">{nota.tipo === "NFCE" ? "NFC-e" : "NF-e"} {nota.numero}/{nota.serie}</span>
                     <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">Autorizada</span>
                   </div>
-                  <p className="text-sm text-gray-600">{nota.cliente} · {nota.cnpj}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{nota.data} · R$ {nota.valor.toFixed(2)}</p>
+                  <p className="text-sm text-gray-600">
+                    {nota.clienteNome ?? "Consumidor final"}
+                    {nota.clienteDocumento && ` · ${documento(nota.clienteDocumento)}`}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">{data(nota.emitidaEm)} · {dinheiro(nota.valorTotal)}</p>
                 </div>
                 <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors">
                   <RotateCcw size={12} />
@@ -148,15 +197,15 @@ export function NotaDevolucao() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Cliente</p>
-                <p className="text-sm font-medium text-gray-900 truncate">{notaRef.cliente}</p>
+                <p className="text-sm font-medium text-gray-900 truncate">{notaRef.clienteNome ?? "Consumidor final"}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Data</p>
-                <p className="text-sm font-medium text-gray-900">{notaRef.data}</p>
+                <p className="text-sm font-medium text-gray-900">{data(notaRef.emitidaEm)}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Valor Original</p>
-                <p className="text-sm font-medium text-gray-900">R$ {notaRef.valor.toFixed(2)}</p>
+                <p className="text-sm font-medium text-gray-900">{dinheiro(notaRef.valorTotal)}</p>
               </div>
             </div>
           </div>
@@ -164,9 +213,12 @@ export function NotaDevolucao() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base text-gray-900">Itens a Devolver</h2>
-              <button className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700">
+              <button
+                onClick={() => setItens(itensOriginais.map((i) => ({ ...i })))}
+                className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700"
+              >
                 <Plus size={14} />
-                Adicionar item
+                Restaurar itens da nota
               </button>
             </div>
 
@@ -201,10 +253,10 @@ export function NotaDevolucao() {
                         />
                       </td>
                       <td className="py-3 px-2 text-right text-sm text-gray-900">
-                        R$ {item.valorUnitario.toFixed(2)}
+                        {dinheiro(item.valorUnitario)}
                       </td>
                       <td className="py-3 px-2 text-right text-sm text-gray-900">
-                        R$ {(item.qtdDevolver * item.valorUnitario).toFixed(2)}
+                        {dinheiro(item.qtdDevolver * item.valorUnitario)}
                       </td>
                       <td className="py-3 px-2 text-center">
                         <button onClick={() => removerItem(item.id)} className="p-1 text-red-500 hover:bg-red-50 rounded">
@@ -220,7 +272,7 @@ export function NotaDevolucao() {
             <div className="flex justify-end mt-3 pt-3 border-t border-gray-100">
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-600">Total da Devolução</span>
-                <span className="text-lg font-semibold text-orange-600">R$ {totalDevolucao.toFixed(2)}</span>
+                <span className="text-lg font-semibold text-orange-600">{dinheiro(totalDevolucao)}</span>
               </div>
             </div>
           </div>
@@ -235,6 +287,8 @@ export function NotaDevolucao() {
               className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
+
+          {erro && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{erro}</div>}
 
           <div className="flex gap-3">
             <button
