@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { Archive, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { inutilizacoesService } from "../services";
+import { useApi } from "../lib/useApi";
+import { data, mensagemErro } from "../lib/formato";
 
 export function Inutilizacao() {
   const [form, setForm] = useState({
@@ -27,19 +30,29 @@ export function Inutilizacao() {
     if (!isValid) return;
     setErro("");
     setEnviando(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setEnviando(false);
-    setSucesso(true);
-    setTimeout(() => {
-      setSucesso(false);
-      setForm({ serie: "1", numeroInicial: "", numeroFinal: "", justificativa: "" });
-    }, 3000);
+    try {
+      await inutilizacoesService.criar({
+        serie: form.serie.trim(),
+        numeroInicial: parseInt(form.numeroInicial),
+        numeroFinal: parseInt(form.numeroFinal),
+        justificativa: form.justificativa.trim(),
+      });
+      setSucesso(true);
+      recarregar();
+      setTimeout(() => {
+        setSucesso(false);
+        setForm({ serie: "1", numeroInicial: "", numeroFinal: "", justificativa: "" });
+      }, 3000);
+    } catch (e) {
+      setErro(mensagemErro(e));
+    } finally {
+      setEnviando(false);
+    }
   };
 
-  const inutilizacoes = [
-    { id: 1, serie: "1", inicio: "000110", fim: "000115", data: "20/04/2026", motivo: "Erro de emissão durante queda de sistema", status: "inutilizada" },
-    { id: 2, serie: "1", inicio: "000098", fim: "000098", data: "10/03/2026", motivo: "Numeração pulada por falha no sistema", status: "inutilizada" },
-  ];
+  const { dados, carregando, recarregar } = useApi(() => inutilizacoesService.listar(), []);
+  const inutilizacoes = dados ?? [];
+  const seis = (n: number) => String(n).padStart(6, "0");
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 md:p-8">
@@ -169,16 +182,24 @@ export function Inutilizacao() {
                 <div key={item.id} className="p-3 border border-gray-200 rounded-lg">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium text-gray-900">
-                      Série {item.serie} · {item.inicio} a {item.fim}
+                      Série {item.serie} · {seis(item.numeroInicial)} a {seis(item.numeroFinal)}
                     </span>
                     <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
                       Inutilizada
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500">{item.data}</p>
-                  <p className="text-xs text-gray-600 mt-1">{item.motivo}</p>
+                  <p className="text-xs text-gray-500">
+                    {data(item.registradaEm)}
+                    {item.protocolo && ` · Protocolo ${item.protocolo}`}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">{item.justificativa}</p>
                 </div>
               ))}
+              {inutilizacoes.length === 0 && (
+                <p className="py-6 text-center text-sm text-gray-400">
+                  {carregando ? "Carregando..." : "Nenhuma inutilização registrada"}
+                </p>
+              )}
             </div>
           </div>
         </div>

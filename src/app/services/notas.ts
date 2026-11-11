@@ -4,11 +4,14 @@ import type {
   NotaFiscal,
   NotaFiscalItem,
   StatusNota,
+  TipoNota,
 } from "../types";
 import { request, requestBlob } from "./http";
 
 export interface FiltroNotas {
   status?: StatusNota;
+  tipo?: TipoNota;
+  vendaId?: number;
   de?: string; // ISO yyyy-MM-dd
   ate?: string; // ISO yyyy-MM-dd
 }
@@ -16,6 +19,8 @@ export interface FiltroNotas {
 export const notasService = {
   listar: (filtro: FiltroNotas = {}) =>
     request<NotaFiscal[]>("/notas", { query: { ...filtro } }),
+
+  buscar: (id: number) => request<NotaFiscal>(`/notas/${id}`),
 
   itens: (id: number) => request<NotaFiscalItem[]>(`/notas/${id}/itens`),
 
@@ -33,6 +38,10 @@ export const notasService = {
       method: "POST",
       body: { justificativa },
     }),
+
+  /** Só para nota "rejeitada": volta para "processando" e é transmitida de novo. */
+  reenviar: (id: number) =>
+    request<NotaFiscal>(`/notas/${id}/reenviar`, { method: "POST" }),
 
   emitirDevolucao: (dados: DevolucaoInput) =>
     request<NotaFiscal>("/notas/devolucao", { method: "POST", body: dados }),

@@ -2,12 +2,20 @@ import { clearToken, getToken } from "./tokenStorage";
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "/api";
 
+export interface CampoErro {
+  campo: string;
+  message: string;
+}
+
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** Erros de validação por campo (400), quando o back manda. */
+  campos: CampoErro[];
+  constructor(status: number, message: string, campos: CampoErro[] = []) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.campos = campos;
   }
 }
 
@@ -63,13 +71,15 @@ async function enviar(path: string, { method = "GET", query, body }: Opcoes): Pr
       aoNaoAutorizado?.();
     }
     let mensagem = `Erro ${res.status}`;
+    let campos: CampoErro[] = [];
     try {
       const dados = await res.json();
       if (typeof dados?.message === "string") mensagem = dados.message;
+      if (Array.isArray(dados?.campos)) campos = dados.campos;
     } catch {
       // resposta sem JSON: mantém a mensagem padrão
     }
-    throw new ApiError(res.status, mensagem);
+    throw new ApiError(res.status, mensagem, campos);
   }
   return res;
 }

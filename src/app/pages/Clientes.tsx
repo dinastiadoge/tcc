@@ -11,144 +11,66 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
-
-interface Cliente {
-  id: number;
-  tipo: "PF" | "PJ";
-  documento: string;
-  nome: string;
-  email: string;
-  telefone: string;
-  cidade: string;
-  uf: string;
-  totalCompras: number;
-  ultimaCompra: string;
-  status: "ativo" | "inativo";
-}
-
-const clientesData: Cliente[] = [
-  {
-    id: 1,
-    tipo: "PJ",
-    documento: "12.345.678/0001-90",
-    nome: "Transportadora Rápida Ltda",
-    email: "contato@rapidaltda.com",
-    telefone: "(11) 3456-7890",
-    cidade: "São Paulo",
-    uf: "SP",
-    totalCompras: 15,
-    ultimaCompra: "23/04/2026",
-    status: "ativo",
-  },
-  {
-    id: 2,
-    tipo: "PJ",
-    documento: "98.765.432/0001-11",
-    nome: "Posto Central",
-    email: "posto@central.com.br",
-    telefone: "(11) 2345-6789",
-    cidade: "Guarulhos",
-    uf: "SP",
-    totalCompras: 42,
-    ultimaCompra: "23/04/2026",
-    status: "ativo",
-  },
-  {
-    id: 3,
-    tipo: "PJ",
-    documento: "45.678.901/0001-23",
-    nome: "Retífica Souza Ltda",
-    email: "retifica@souza.com",
-    telefone: "(11) 4567-8901",
-    cidade: "São Paulo",
-    uf: "SP",
-    totalCompras: 28,
-    ultimaCompra: "23/04/2026",
-    status: "ativo",
-  },
-  {
-    id: 4,
-    tipo: "PF",
-    documento: "123.456.789-00",
-    nome: "João Silva",
-    email: "joao.silva@email.com",
-    telefone: "(11) 98765-4321",
-    cidade: "São Paulo",
-    uf: "SP",
-    totalCompras: 8,
-    ultimaCompra: "22/04/2026",
-    status: "ativo",
-  },
-  {
-    id: 5,
-    tipo: "PJ",
-    documento: "23.456.789/0001-45",
-    nome: "Auto Mecânica Silva",
-    email: "mecanica@silva.com.br",
-    telefone: "(11) 3789-0123",
-    cidade: "Osasco",
-    uf: "SP",
-    totalCompras: 35,
-    ultimaCompra: "23/04/2026",
-    status: "ativo",
-  },
-  {
-    id: 6,
-    tipo: "PF",
-    documento: "234.567.890-11",
-    nome: "Maria Santos",
-    email: "maria.santos@email.com",
-    telefone: "(11) 97654-3210",
-    cidade: "São Paulo",
-    uf: "SP",
-    totalCompras: 5,
-    ultimaCompra: "21/04/2026",
-    status: "ativo",
-  },
-  {
-    id: 7,
-    tipo: "PJ",
-    documento: "34.567.890/0001-67",
-    nome: "Oficina do João",
-    email: "oficina@joao.com",
-    telefone: "(11) 2890-1234",
-    cidade: "Barueri",
-    uf: "SP",
-    totalCompras: 19,
-    ultimaCompra: "22/04/2026",
-    status: "ativo",
-  },
-  {
-    id: 8,
-    tipo: "PF",
-    documento: "345.678.901-22",
-    nome: "Pedro Oliveira",
-    email: "pedro.oliveira@email.com",
-    telefone: "(11) 96543-2109",
-    cidade: "São Paulo",
-    uf: "SP",
-    totalCompras: 3,
-    ultimaCompra: "20/04/2026",
-    status: "inativo",
-  },
-];
+import { useSearchParams } from "react-router";
+import { toast } from "sonner";
+import { clientesService } from "../services";
+import type { Cliente } from "../types";
+import { useApi } from "../lib/useApi";
+import { data, documento, mensagemErro, telefone } from "../lib/formato";
+import { Modal } from "../components/Modal";
+import { ClienteForm } from "../components/ClienteForm";
 
 export function Clientes() {
   const [filtroTipo, setFiltroTipo] = useState<
     "todos" | "PF" | "PJ"
   >("todos");
   const [busca, setBusca] = useState("");
+  const [params, setParams] = useSearchParams();
+  const [editando, setEditando] = useState<Cliente | null>(null);
+  const [novo, setNovo] = useState(false);
+
+  const { dados, carregando, erro, recarregar } = useApi(() => clientesService.listar(), []);
+  const clientesData = dados ?? [];
+
+  // O PDV abre /clientes?editar={id}&foco=endereco quando a NF-e precisa do endereço.
+  const editarId = Number(params.get("editar"));
+  const focoEndereco = params.get("foco") === "endereco";
+  const clienteDaUrl = editarId ? clientesData.find((c) => c.id === editarId) ?? null : null;
+  const clienteEmEdicao = editando ?? clienteDaUrl;
+
+  const fecharForm = () => {
+    setEditando(null);
+    setNovo(false);
+    if (params.has("editar")) setParams({}, { replace: true });
+  };
+
+  const aoSalvar = (c: Cliente) => {
+    toast.success(novo ? `Cliente ${c.nome} cadastrado.` : `Cliente ${c.nome} atualizado.`);
+    fecharForm();
+    recarregar();
+  };
+
+  const desativar = async (c: Cliente) => {
+    if (!window.confirm(`Desativar o cliente ${c.nome}? O histórico de compras continua guardado.`)) return;
+    try {
+      await clientesService.excluir(c.id);
+      toast.success(`Cliente ${c.nome} desativado.`);
+      recarregar();
+    } catch (e) {
+      toast.error(mensagemErro(e));
+    }
+  };
 
   const clientesFiltrados = clientesData.filter((cliente) => {
     const matchTipo =
       filtroTipo === "todos" || cliente.tipo === filtroTipo;
+    const termo = busca.toLowerCase();
+    const digitos = busca.replace(/\D/g, "");
     const matchBusca =
       busca === "" ||
-      cliente.nome
-        .toLowerCase()
-        .includes(busca.toLowerCase()) ||
-      cliente.documento.includes(busca) ||
-      cliente.email.toLowerCase().includes(busca.toLowerCase());
+      cliente.nome.toLowerCase().includes(termo) ||
+      (digitos !== "" && cliente.documento.includes(digitos)) ||
+      cliente.email.toLowerCase().includes(termo);
     return matchTipo && matchBusca;
   });
 
@@ -159,7 +81,7 @@ export function Clientes() {
     (c) => c.tipo === "PJ",
   ).length;
   const totalAtivos = clientesData.filter(
-    (c) => c.status === "ativo",
+    (c) => c.ativo,
   ).length;
 
   const estatisticas = [
@@ -293,7 +215,10 @@ export function Clientes() {
                 size={18}
               />
             </div>
-            <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors whitespace-nowrap">
+            <button
+              onClick={() => setNovo(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors whitespace-nowrap"
+            >
               <Plus size={18} />
               <span>Novo Cliente</span>
             </button>
@@ -353,7 +278,7 @@ export function Clientes() {
                     )}
                   </td>
                   <td className="py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-900">
-                    {cliente.documento}
+                    {documento(cliente.documento)}
                   </td>
                   <td className="py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-900">
                     {cliente.nome}
@@ -363,29 +288,32 @@ export function Clientes() {
                       <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-600">
                         <Mail size={12} />
                         <span className="truncate max-w-[180px]">
-                          {cliente.email}
+                          {cliente.email || "-"}
                         </span>
                       </div>
                       <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-600">
                         <Phone size={12} />
-                        {cliente.telefone}
+                        {telefone(cliente.telefone) || "-"}
                       </div>
                     </div>
                   </td>
                   <td className="py-3 px-2 sm:px-3">
                     <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-600">
                       <MapPin size={12} />
-                      {cliente.cidade}/{cliente.uf}
+                      {cliente.cidade ? `${cliente.cidade}/${cliente.uf}` : "-"}
                     </div>
+                    {cliente.tipo === "PJ" && !cliente.logradouro && (
+                      <span className="block mt-1 text-xs text-orange-600">Sem endereço</span>
+                    )}
                   </td>
                   <td className="py-3 px-2 sm:px-3 text-center text-xs sm:text-sm text-gray-900">
                     {cliente.totalCompras}
                   </td>
                   <td className="py-3 px-2 sm:px-3 text-center text-xs sm:text-sm text-gray-600">
-                    {cliente.ultimaCompra}
+                    {cliente.ultimaCompra ? data(cliente.ultimaCompra) : "-"}
                   </td>
                   <td className="py-3 px-2 sm:px-3 text-center">
-                    {cliente.status === "ativo" ? (
+                    {cliente.ativo ? (
                       <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 text-green-700">
                         Ativo
                       </span>
@@ -398,6 +326,7 @@ export function Clientes() {
                   <td className="py-3 px-2 sm:px-3">
                     <div className="flex items-center justify-center gap-1 sm:gap-2">
                       <button
+                        onClick={() => setEditando(cliente)}
                         className="p-1 sm:p-1.5 hover:bg-blue-50 text-blue-600 rounded transition-colors"
                         title="Editar"
                       >
@@ -407,8 +336,10 @@ export function Clientes() {
                         />
                       </button>
                       <button
-                        className="p-1 sm:p-1.5 hover:bg-red-50 text-red-600 rounded transition-colors"
-                        title="Excluir"
+                        onClick={() => desativar(cliente)}
+                        disabled={!cliente.ativo}
+                        className="p-1 sm:p-1.5 hover:bg-red-50 text-red-600 rounded transition-colors disabled:opacity-30"
+                        title="Desativar"
                       >
                         <Trash2
                           size={14}
@@ -430,11 +361,25 @@ export function Clientes() {
               size={48}
             />
             <p className="text-gray-600">
-              Nenhum cliente encontrado
+              {carregando ? "Carregando..." : erro ?? "Nenhum cliente encontrado"}
             </p>
           </div>
         )}
       </div>
+
+      <Modal
+        titulo={novo ? "Novo Cliente" : "Editar Cliente"}
+        aberto={novo || clienteEmEdicao !== null}
+        onFechar={fecharForm}
+      >
+        <ClienteForm
+          key={clienteEmEdicao?.id ?? "novo"}
+          cliente={novo ? null : clienteEmEdicao}
+          focoEndereco={focoEndereco}
+          onSalvo={aoSalvar}
+          onCancelar={fecharForm}
+        />
+      </Modal>
     </div>
   );
 }

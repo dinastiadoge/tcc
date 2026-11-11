@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Outlet, Navigate } from "react-router";
+import { Toaster } from "sonner";
 import { Sidebar } from "./Sidebar";
 import { MobileHeader } from "./MobileHeader";
 import { useAuth } from "../context/AuthContext";
@@ -29,6 +30,7 @@ export function Layout() {
         <main className="flex-1 overflow-y-auto pt-16 md:pt-0">
           <Outlet />
         </main>
+        <Toaster richColors position="top-right" />
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 export { ApiError, definirAoNaoAutorizado } from "./http";
+export type { CampoErro } from "./http";
 export { getToken, setToken, clearToken } from "./tokenStorage";
 export { authService } from "./auth";
 export { clientesService } from "./clientes";

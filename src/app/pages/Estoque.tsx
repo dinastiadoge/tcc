@@ -1,60 +1,68 @@
-import { Search, Plus, Package, AlertTriangle, TrendingUp, TrendingDown, Edit, Trash2, X, Save } from "lucide-react";
+import { Search, Plus, Package, AlertTriangle, TrendingUp, TrendingDown, Edit, Trash2, X, Save, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { produtosService } from "../services";
+import type { Produto, ProdutoInput } from "../types";
+import { useApi } from "../lib/useApi";
+import { dinheiro, errosPorCampo, mensagemErro, ncm as formatarNcm, somenteDigitos } from "../lib/formato";
 
-interface Produto {
-  id: number;
-  codigo: string;
-  nome: string;
-  ncm: string;
-  estoque: number;
-  minimo: number;
-  custo: number;
-  venda: number;
-  status: string;
-}
-
-const produtosIniciais: Produto[] = [
-  { id: 1, codigo: "PF-001", nome: "Pastilha de Freio Dianteira", ncm: "8708.30.10", estoque: 45, minimo: 20, custo: 85.0, venda: 125.0, status: "ok" },
-  { id: 2, codigo: "FO-023", nome: "Filtro de Óleo Motor", ncm: "8421.23.00", estoque: 5, minimo: 15, custo: 28.0, venda: 45.9, status: "baixo" },
-  { id: 3, codigo: "CD-045", nome: "Correia Dentada", ncm: "4010.35.00", estoque: 8, minimo: 10, custo: 120.0, venda: 189.9, status: "baixo" },
-  { id: 4, codigo: "VI-012", nome: "Vela de Ignição", ncm: "8511.10.00", estoque: 12, minimo: 10, custo: 18.0, venda: 32.9, status: "atencao" },
-  { id: 5, codigo: "LH-089", nome: "Lâmpada H4 12V", ncm: "8539.21.00", estoque: 67, minimo: 30, custo: 12.0, venda: 24.9, status: "ok" },
-  { id: 6, codigo: "BA-034", nome: "Bateria 60Ah", ncm: "8507.10.00", estoque: 3, minimo: 8, custo: 280.0, venda: 459.0, status: "critico" },
-  { id: 7, codigo: "AM-078", nome: "Amortecedor Dianteiro", ncm: "8708.80.00", estoque: 22, minimo: 12, custo: 195.0, venda: 329.9, status: "ok" },
-  { id: 8, codigo: "DI-056", nome: "Disco de Freio", ncm: "8708.30.10", estoque: 18, minimo: 15, custo: 145.0, venda: 239.9, status: "atencao" },
-];
-
-const estatisticas = [
-  { label: "Total de Produtos", valor: "847", icone: Package, cor: "blue" },
-  { label: "Estoque Baixo", valor: "23", icone: AlertTriangle, cor: "orange" },
-  { label: "Valor em Estoque", valor: "R$ 145.890", icone: TrendingUp, cor: "green" },
-  { label: "Itens Críticos", valor: "8", icone: TrendingDown, cor: "red" },
-];
+const produtoVazio: ProdutoInput = {
+  codigo: "",
+  nome: "",
+  ncm: "",
+  estoqueAtual: 0,
+  estoqueMinimo: 0,
+  precoCusto: 0,
+  precoVenda: 0,
+};
 
 function ModalEditarProduto({
   produto,
-  onSalvar,
+  onSalvo,
   onFechar,
 }: {
-  produto: Produto;
-  onSalvar: (p: Produto) => void;
+  produto: Produto | null;
+  onSalvo: (p: Produto) => void;
   onFechar: () => void;
 }) {
-  const [form, setForm] = useState<Produto>({ ...produto });
+  const [form, setForm] = useState<ProdutoInput>(() => {
+    if (!produto) return { ...produtoVazio };
+    const { id: _id, status: _status, ...resto } = produto;
+    return resto;
+  });
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [erros, setErros] = useState<Record<string, string>>({});
 
-  const set = (field: keyof Produto, value: string | number) =>
+  const set = (field: keyof ProdutoInput, value: string | number) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSalvar(form);
+    setSalvando(true);
+    setErro(null);
+    setErros({});
+    const dados = { ...form, ncm: somenteDigitos(form.ncm) };
+    try {
+      const salvo = produto
+        ? await produtosService.atualizar(produto.id, dados)
+        : await produtosService.criar(dados);
+      onSalvo(salvo);
+    } catch (err) {
+      setErro(mensagemErro(err));
+      setErros(errosPorCampo(err));
+    } finally {
+      setSalvando(false);
+    }
   };
+
+  const erroDe = (campo: string) => erros[campo] && <p className="text-xs text-red-600 mt-1">{erros[campo]}</p>;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
-          <h3 className="text-lg text-gray-900">Editar Produto</h3>
+          <h3 className="text-lg text-gray-900">{produto ? "Editar Produto" : "Novo Produto"}</h3>
           <button
             onClick={onFechar}
             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
@@ -64,6 +72,7 @@ function ModalEditarProduto({
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {erro && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{erro}</div>}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-gray-600 mb-1.5">Código</label>
@@ -73,6 +82,7 @@ function ModalEditarProduto({
                 onChange={(e) => set("codigo", e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
               />
+              {erroDe("codigo")}
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-1.5">NCM</label>
@@ -82,6 +92,7 @@ function ModalEditarProduto({
                 onChange={(e) => set("ncm", e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
               />
+              {erroDe("ncm")}
             </div>
           </div>
 
@@ -93,6 +104,7 @@ function ModalEditarProduto({
               onChange={(e) => set("nome", e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
             />
+              {erroDe("nome")}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -100,21 +112,23 @@ function ModalEditarProduto({
               <label className="block text-xs text-gray-600 mb-1.5">Estoque Atual</label>
               <input
                 type="number"
-                value={form.estoque}
-                onChange={(e) => set("estoque", parseInt(e.target.value) || 0)}
+                value={form.estoqueAtual}
+                onChange={(e) => set("estoqueAtual", parseInt(e.target.value) || 0)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                 min="0"
               />
+              {erroDe("estoqueAtual")}
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-1.5">Estoque Mínimo</label>
               <input
                 type="number"
-                value={form.minimo}
-                onChange={(e) => set("minimo", parseInt(e.target.value) || 0)}
+                value={form.estoqueMinimo}
+                onChange={(e) => set("estoqueMinimo", parseInt(e.target.value) || 0)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                 min="0"
               />
+              {erroDe("estoqueMinimo")}
             </div>
           </div>
 
@@ -124,22 +138,24 @@ function ModalEditarProduto({
               <input
                 type="number"
                 step="0.01"
-                value={form.custo}
-                onChange={(e) => set("custo", parseFloat(e.target.value) || 0)}
+                value={form.precoCusto}
+                onChange={(e) => set("precoCusto", parseFloat(e.target.value) || 0)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                 min="0"
               />
+              {erroDe("precoCusto")}
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-1.5">Preço de Venda (R$)</label>
               <input
                 type="number"
                 step="0.01"
-                value={form.venda}
-                onChange={(e) => set("venda", parseFloat(e.target.value) || 0)}
+                value={form.precoVenda}
+                onChange={(e) => set("precoVenda", parseFloat(e.target.value) || 0)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                 min="0"
               />
+              {erroDe("precoVenda")}
             </div>
           </div>
 
@@ -153,10 +169,11 @@ function ModalEditarProduto({
             </button>
             <button
               type="submit"
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              disabled={salvando}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 rounded-lg transition-colors"
             >
-              <Save size={15} />
-              Salvar Alterações
+              {salvando ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+              {produto ? "Salvar Alterações" : "Cadastrar Produto"}
             </button>
           </div>
         </form>
@@ -166,9 +183,13 @@ function ModalEditarProduto({
 }
 
 export function Estoque() {
-  const [produtos, setProdutos] = useState<Produto[]>(produtosIniciais);
   const [busca, setBusca] = useState("");
   const [produtoEditando, setProdutoEditando] = useState<Produto | null>(null);
+  const [novo, setNovo] = useState(false);
+
+  const { dados, carregando, erro, recarregar } = useApi(() => produtosService.listar(), []);
+  const resumo = useApi(() => produtosService.resumo(), []);
+  const produtos = dados ?? [];
 
   const produtosFiltrados = produtos.filter(
     (p) =>
@@ -177,20 +198,36 @@ export function Estoque() {
       p.codigo.toLowerCase().includes(busca.toLowerCase()),
   );
 
-  const salvarProduto = (produtoAtualizado: Produto) => {
-    const estoque = produtoAtualizado.estoque;
-    const minimo = produtoAtualizado.minimo;
-    let status = "ok";
-    if (estoque <= minimo * 0.4) status = "critico";
-    else if (estoque < minimo * 0.7) status = "baixo";
-    else if (estoque < minimo) status = "atencao";
+  const r = resumo.dados;
+  const estatisticas = [
+    { label: "Total de Produtos", valor: r ? String(r.totalProdutos) : "...", icone: Package, cor: "blue" },
+    { label: "Estoque Baixo", valor: r ? String(r.estoqueBaixo) : "...", icone: AlertTriangle, cor: "orange" },
+    { label: "Valor em Estoque", valor: r ? dinheiro(r.valorEmEstoque) : "...", icone: TrendingUp, cor: "green" },
+    { label: "Itens Críticos", valor: r ? String(r.itensCriticos) : "...", icone: TrendingDown, cor: "red" },
+  ];
 
-    setProdutos(
-      produtos.map((p) =>
-        p.id === produtoAtualizado.id ? { ...produtoAtualizado, status } : p,
-      ),
-    );
+  const fechar = () => {
     setProdutoEditando(null);
+    setNovo(false);
+  };
+
+  const aoSalvar = (p: Produto) => {
+    toast.success(novo ? `Produto ${p.codigo} cadastrado.` : `Produto ${p.codigo} atualizado.`);
+    fechar();
+    recarregar();
+    resumo.recarregar();
+  };
+
+  const excluir = async (p: Produto) => {
+    if (!window.confirm(`Excluir o produto ${p.codigo} - ${p.nome}?`)) return;
+    try {
+      await produtosService.excluir(p.id);
+      toast.success(`Produto ${p.codigo} excluído.`);
+      recarregar();
+      resumo.recarregar();
+    } catch (e) {
+      toast.error(mensagemErro(e));
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -205,11 +242,11 @@ export function Estoque() {
 
   return (
     <>
-      {produtoEditando && (
+      {(produtoEditando || novo) && (
         <ModalEditarProduto
-          produto={produtoEditando}
-          onSalvar={salvarProduto}
-          onFechar={() => setProdutoEditando(null)}
+          produto={novo ? null : produtoEditando}
+          onSalvo={aoSalvar}
+          onFechar={fechar}
         />
       )}
 
@@ -258,7 +295,9 @@ export function Estoque() {
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               </div>
-              <button className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors whitespace-nowrap text-sm">
+              <button
+                onClick={() => setNovo(true)}
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors whitespace-nowrap text-sm">
                 <Plus size={16} />
                 <span>Novo Produto</span>
               </button>
@@ -285,14 +324,14 @@ export function Estoque() {
                   <tr key={produto.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td className="py-3 px-2 sm:px-3 text-xs text-gray-500">{produto.codigo}</td>
                     <td className="py-3 px-2 sm:px-3 text-xs sm:text-sm text-gray-900">{produto.nome}</td>
-                    <td className="py-3 px-2 sm:px-3 text-xs text-gray-500">{produto.ncm}</td>
-                    <td className="py-3 px-2 sm:px-3 text-center text-xs sm:text-sm text-gray-900">{produto.estoque}</td>
-                    <td className="py-3 px-2 sm:px-3 text-center text-xs text-gray-500">{produto.minimo}</td>
+                    <td className="py-3 px-2 sm:px-3 text-xs text-gray-500">{formatarNcm(produto.ncm)}</td>
+                    <td className="py-3 px-2 sm:px-3 text-center text-xs sm:text-sm text-gray-900">{produto.estoqueAtual}</td>
+                    <td className="py-3 px-2 sm:px-3 text-center text-xs text-gray-500">{produto.estoqueMinimo}</td>
                     <td className="py-3 px-2 sm:px-3 text-right text-xs sm:text-sm text-gray-900">
-                      R$ {produto.custo.toFixed(2)}
+                      {dinheiro(produto.precoCusto)}
                     </td>
                     <td className="py-3 px-2 sm:px-3 text-right text-xs sm:text-sm text-gray-900">
-                      R$ {produto.venda.toFixed(2)}
+                      {dinheiro(produto.precoVenda)}
                     </td>
                     <td className="py-3 px-2 sm:px-3 text-center">
                       {getStatusBadge(produto.status)}
@@ -307,6 +346,7 @@ export function Estoque() {
                           <Edit size={14} />
                         </button>
                         <button
+                          onClick={() => excluir(produto)}
                           className="p-1.5 hover:bg-red-50 text-red-500 rounded transition-colors"
                           title="Excluir produto"
                         >
@@ -319,7 +359,7 @@ export function Estoque() {
                 {produtosFiltrados.length === 0 && (
                   <tr>
                     <td colSpan={9} className="py-8 text-center text-sm text-gray-400">
-                      Nenhum produto encontrado
+                      {carregando ? "Carregando..." : erro ?? "Nenhum produto encontrado"}
                     </td>
                   </tr>
                 )}
